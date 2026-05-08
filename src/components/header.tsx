@@ -2,7 +2,7 @@ import logoUrl from "@/assets/self-logo-pathed-plain.svg"
 
 export default function Header() {
     return (
-        <header className="border-b">
+        <header className="border-b bg-card">
             <div className="mx-auto flex min-h-24 w-full max-w-5xl items-center justify-between px-8">
                 <a href="/" className="group flex items-center gap-4">
                     <img
