@@ -3,12 +3,8 @@ export default function Footer() {
         <footer className="border-t bg-background">
             <div className="mx-auto flex min-h-24 w-full max-w-6xl items-center justify-between px-8">
                 <div className="space-y-1">
-                    <p className="font-medium text-foreground">
-                        Kristian Klette
-                    </p>
-
-                    <p className="text-sm text-muted-foreground">
-                        Electrical engineer · Automation · Software development
+                    <p className="font-medium text-muted-foreground">
+                        © 2026 Kristian Klette
                     </p>
                 </div>
 
