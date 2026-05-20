@@ -23,12 +23,6 @@ export default function Header() {
                 </a>
 
                 <nav className="hidden items-center gap-8 text-base text-muted-foreground md:flex">
-                    <a
-                        href="/visuals"
-                        className="transition-colors hover:text-foreground"
-                    >
-                        Visuals
-                    </a>
 
                     <a
                         href="/algorithms"
