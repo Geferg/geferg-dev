@@ -32,13 +32,6 @@ export default function Header() {
                     </a>
 
                     <a
-                        href="/hardware"
-                        className="transition-colors hover:text-foreground"
-                    >
-                        Hardware
-                    </a>
-
-                    <a
                         href="/projects"
                         className="transition-colors hover:text-foreground"
                     >
