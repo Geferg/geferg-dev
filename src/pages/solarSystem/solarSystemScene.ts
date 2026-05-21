@@ -14,10 +14,10 @@ class Orbit {
         this.origin.y = y;
     }
 
-    update(dt: number) {
+    update(dt: number, screenHeight: number) {
         this.t += dt;
         this.updatePlanetPositions();
-        this.updatePlanetGraphics();
+        this.updatePlanetGraphics(screenHeight);
     }
 
     updatePlanetPositions() {
@@ -28,9 +28,9 @@ class Orbit {
         }
     }
 
-    updatePlanetGraphics() {
+    updatePlanetGraphics(screenHeight: number) {
         for (const p of this.planets) {
-            p.updateGraphics();
+            p.updateGraphics(screenHeight);
         }
     }
 }
@@ -64,9 +64,9 @@ class Planet {
         this.y = y;
     }
 
-    updateGraphics() {
+    updateGraphics(screenHeight: number) {
         this.graphics.position.set(this.x, this.y);
-        this.graphics.scale.set()
+        this.graphics.scale.set(0.25 + (this.y / screenHeight) * 1.5);
         this.graphics.zIndex = this.y;
     }
 
@@ -80,15 +80,15 @@ export function createSolarSystemScene(app: Application) {
     let sun = new Planet("The Sun", 100, "#CC8A10");
     sun.setPosition(app.screen.width / 2, app.screen.height / 2);
 
-    let mercury = new Planet("Mercury", 12, "#BB3300", { w: maxOrbitX * 0.13, h: maxOrbitY * 0.13, offset: Math.random() * Math.PI * 2 }, 47.4);
-    let venus = new Planet("Venus", 17, "#EE3300", { w: maxOrbitX * 0.17, h: maxOrbitY * 0.17, offset: Math.random() * Math.PI * 2 }, 35);
-    let earth = new Planet("Earth", 18, "#0055FF", { w: maxOrbitX * 0.24, h: maxOrbitY * 0.24, offset: Math.random() * Math.PI * 2 }, 29.8);
-    let mars = new Planet("Mars", 12, "#DD3300", { w: maxOrbitX * 0.31, h: maxOrbitY * 0.31, offset: Math.random() * Math.PI * 2 }, 24.1);
-    let jupiter = new Planet("Jupiter", 75, "#FF9977", { w: maxOrbitX * 0.42, h: maxOrbitY * 0.42, offset: Math.random() * Math.PI * 2 }, 13.1);
-    let saturn = new Planet("Saturn", 75, "#DD9977", { w: maxOrbitX * 0.62, h: maxOrbitY * 0.62, offset: Math.random() * Math.PI * 2 }, 9.7);
-    let uranus = new Planet("Uranus", 32, "#10cc97", { w: maxOrbitX * 0.8, h: maxOrbitY * 0.8, offset: Math.random() * Math.PI * 2 }, 6.8);
-    let neptune = new Planet("Neptune", 31, "#29D8FF", { w: maxOrbitX * 0.92, h: maxOrbitY * 0.92, offset: Math.random() * Math.PI * 2 }, 5.4);
-    let pluto = new Planet("Pluto", 7, "#444444", { w: maxOrbitX * 1.1, h: maxOrbitY * 1.1, offset: Math.random() * Math.PI * 2 }, 4.7);
+    let mercury = new Planet("Mercury", 12, "#BB3300", { w: maxOrbitX * 0.13, h: 300 * 0.13, offset: Math.random() * Math.PI * 2 }, 47.4);
+    let venus = new Planet("Venus", 17, "#EE3300", { w: maxOrbitX * 0.17, h: 300 * 0.17, offset: Math.random() * Math.PI * 2 }, 35);
+    let earth = new Planet("Earth", 18, "#0055FF", { w: maxOrbitX * 0.24, h: 300 * 0.24, offset: Math.random() * Math.PI * 2 }, 29.8);
+    let mars = new Planet("Mars", 12, "#DD3300", { w: maxOrbitX * 0.31, h: 300 * 0.31, offset: Math.random() * Math.PI * 2 }, 24.1);
+    let jupiter = new Planet("Jupiter", 75, "#FF9977", { w: maxOrbitX * 0.42, h: 300 * 0.42, offset: Math.random() * Math.PI * 2 }, 13.1);
+    let saturn = new Planet("Saturn", 75, "#DD9977", { w: maxOrbitX * 0.62, h: 300 * 0.62, offset: Math.random() * Math.PI * 2 }, 9.7);
+    let uranus = new Planet("Uranus", 32, "#10cc97", { w: maxOrbitX * 0.8, h: 300 * 0.8, offset: Math.random() * Math.PI * 2 }, 6.8);
+    let neptune = new Planet("Neptune", 31, "#29D8FF", { w: maxOrbitX * 0.92, h: 300 * 0.92, offset: Math.random() * Math.PI * 2 }, 5.4);
+    let pluto = new Planet("Pluto", 7, "#444444", { w: maxOrbitX * 1.1, h: 300 * 1.1, offset: Math.random() * Math.PI * 2 }, 4.7);
 
     let sunOrbit = new Orbit(sun.x, sun.y);
     sunOrbit.speed = 0.01;
@@ -111,12 +111,11 @@ export function createSolarSystemScene(app: Application) {
         worldLayer.addChild(p.graphics);
     }
 
+    sun.updateGraphics(app.screen.height);
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
 
-        sun.updateGraphics();
-        sunOrbit.update(dt);
-
+        sunOrbit.update(dt, app.screen.height);
     };
 
     app.ticker.add(animate);
