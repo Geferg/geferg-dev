@@ -14,7 +14,7 @@ export function App() {
 
 function renderPage(pathname: string) {
     switch (pathname) {
-        case "/solar-system": return <SolarSystem />;
+        case "/": return <SolarSystem />;
         default: return <NotFoundPage />;
     }
 }
