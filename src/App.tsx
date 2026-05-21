@@ -2,6 +2,7 @@ import Footer from "./components/footer";
 import Header from "./components/header";
 import "./index.css";
 import NotFoundPage from "./pages/NotFoundPage";
+import SolarSystem from "./pages/solarSystem/solarSystem";
 
 export function App() {
     return (
@@ -13,15 +14,16 @@ export function App() {
 
 function renderPage(pathname: string) {
     switch (pathname) {
+        case "/solar-system": return <SolarSystem />;
         default: return <NotFoundPage />;
     }
 }
 
 function AppLayout({ children }: { children: React.ReactNode }) {
     return (
-        <div className="min-h-screen flex flex-col">
+        <div className="flex min-h-screen flex-col">
             <Header />
-            <main className="flex-1">
+            <main className="min-h-0 flex flex-1 flex-col">
                 {children}
             </main>
             <Footer />
