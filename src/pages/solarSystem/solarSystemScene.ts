@@ -14,7 +14,13 @@ export function createSolarSystemScene(app: Application) {
         .circle(0, 0, 90)
         .fill("#AA7700");
 
-    let speed = 1;
+    const pluto = new Graphics()
+        .circle(0, 0, 6)
+        .fill("999999");
+
+    let globalSpeed = 0.3;
+    let earthSpeed = 1;
+    let plutoSpeed = 0.5;
 
     worldLayer.sortableChildren = true;
     sun.position.set(centerX, centerY);
@@ -22,18 +28,22 @@ export function createSolarSystemScene(app: Application) {
     app.stage.addChild(worldLayer);
     worldLayer.addChild(earth);
     worldLayer.addChild(sun);
+    worldLayer.addChild(pluto);
 
     let time = 0;
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
         time += dt;
 
+        pluto.x = centerX + Math.sin(globalSpeed * plutoSpeed * time + Math.PI / 2) * 700;
+        pluto.y = centerY + Math.cos(globalSpeed * plutoSpeed * time + Math.PI / 2) * 250;
 
-        earth.x = centerX + Math.sin(speed * time / 2) * 400;
-        earth.y = centerY + Math.cos(speed * time / 2) * 100;
+        earth.x = centerX + Math.sin(globalSpeed * earthSpeed * time) * 400;
+        earth.y = centerY + Math.cos(globalSpeed * earthSpeed * time) * 100;
 
         earth.zIndex = earth.y;
         sun.zIndex = sun.y;
+        pluto.zIndex = pluto.y;
     };
 
     app.ticker.add(animate);
