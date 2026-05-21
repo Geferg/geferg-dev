@@ -22,8 +22,9 @@ class Orbit {
 
     updatePlanetPositions() {
         for (const p of this.planets) {
-            p.x = this.origin.x + Math.cos(this.speed * p.planetSpeed * this.t + p.orbit.offset) * p.orbit.w;
-            p.y = this.origin.y + Math.sin(this.speed * p.planetSpeed * this.t + p.orbit.offset) * p.orbit.h;
+            const x = this.origin.x + Math.cos(this.speed * p.planetSpeed * this.t + p.orbit.offset) * p.orbit.w;
+            const y = this.origin.y + Math.sin(this.speed * p.planetSpeed * this.t + p.orbit.offset) * p.orbit.h;
+            p.setPosition(x, y);
         }
     }
 
@@ -35,16 +36,16 @@ class Orbit {
 }
 
 class Planet {
-    public x = 1;
-    public y = 1;
     public graphics: Graphics;
+    x = 1;
+    y = 1;
 
     constructor(
         public name: string,
         public planetRadius: number,
+        public fill: string = "#AAAAAAAA",
         public orbit = { w: 400, h: 100, offset: Math.PI },
         public planetSpeed: number = 1,
-        public fill: string = "#AAAAAAAA",
     ) {
         this.graphics = new Graphics()
             .circle(0, 0, planetRadius)
@@ -58,82 +59,73 @@ class Planet {
         };
     }
 
+    setPosition(x: number, y: number) {
+        this.x = x;
+        this.y = y;
+    }
+
     updateGraphics() {
         this.graphics.position.set(this.x, this.y);
+        this.graphics.scale.set()
+        this.graphics.zIndex = this.y;
     }
 
 }
 
 export function createSolarSystemScene(app: Application) {
-    const centerX = app.screen.width / 2;
-    const centerY = app.screen.height / 2;
-
+    const maxOrbitX = app.screen.width * 0.5;
+    const maxOrbitY = app.screen.height * 0.45;
     const worldLayer = new Container();
 
-    const earth = new Graphics()
-        .circle(0, 0, 40)
-        .fill("#2AD4FF");
+    let sun = new Planet("The Sun", 100, "#CC8A10");
+    sun.setPosition(app.screen.width / 2, app.screen.height / 2);
 
-    const sun = new Graphics()
-        .circle(0, 0, 90)
-        .fill("#AA7700");
+    let mercury = new Planet("Mercury", 12, "#BB3300", { w: maxOrbitX * 0.13, h: maxOrbitY * 0.13, offset: Math.random() * Math.PI * 2 }, 47.4);
+    let venus = new Planet("Venus", 17, "#EE3300", { w: maxOrbitX * 0.17, h: maxOrbitY * 0.17, offset: Math.random() * Math.PI * 2 }, 35);
+    let earth = new Planet("Earth", 18, "#0055FF", { w: maxOrbitX * 0.24, h: maxOrbitY * 0.24, offset: Math.random() * Math.PI * 2 }, 29.8);
+    let mars = new Planet("Mars", 12, "#DD3300", { w: maxOrbitX * 0.31, h: maxOrbitY * 0.31, offset: Math.random() * Math.PI * 2 }, 24.1);
+    let jupiter = new Planet("Jupiter", 75, "#FF9977", { w: maxOrbitX * 0.42, h: maxOrbitY * 0.42, offset: Math.random() * Math.PI * 2 }, 13.1);
+    let saturn = new Planet("Saturn", 75, "#DD9977", { w: maxOrbitX * 0.62, h: maxOrbitY * 0.62, offset: Math.random() * Math.PI * 2 }, 9.7);
+    let uranus = new Planet("Uranus", 32, "#10cc97", { w: maxOrbitX * 0.8, h: maxOrbitY * 0.8, offset: Math.random() * Math.PI * 2 }, 6.8);
+    let neptune = new Planet("Neptune", 31, "#29D8FF", { w: maxOrbitX * 0.92, h: maxOrbitY * 0.92, offset: Math.random() * Math.PI * 2 }, 5.4);
+    let pluto = new Planet("Pluto", 7, "#444444", { w: maxOrbitX * 1.1, h: maxOrbitY * 1.1, offset: Math.random() * Math.PI * 2 }, 4.7);
 
-    const pluto = new Graphics()
-        .circle(0, 0, 6)
-        .fill("999999");
-
-    let saturn = new Planet("saturn", 60);
-    saturn.x = 200;
-    saturn.y = 200;
-
-
-    let saturnOrbit = new Orbit(saturn.x, saturn.y);
-
-    let hyperion = new Planet("hyperion", 9, { w: 100, h: 100, offset: 0 });
-    saturnOrbit.planets.push(hyperion);
-
-
-    let globalSpeed = 0.3;
-    let earthSpeed = 1;
-    let plutoSpeed = 0.5;
+    let sunOrbit = new Orbit(sun.x, sun.y);
+    sunOrbit.speed = 0.01;
+    sunOrbit.planets.push(mercury);
+    sunOrbit.planets.push(venus);
+    sunOrbit.planets.push(earth);
+    sunOrbit.planets.push(mars);
+    sunOrbit.planets.push(jupiter);
+    sunOrbit.planets.push(saturn);
+    sunOrbit.planets.push(uranus);
+    sunOrbit.planets.push(neptune);
+    sunOrbit.planets.push(pluto);
 
     worldLayer.sortableChildren = true;
-    sun.position.set(centerX, centerY);
 
     app.stage.addChild(worldLayer);
-    worldLayer.addChild(earth);
-    worldLayer.addChild(sun);
-    worldLayer.addChild(pluto);
-    worldLayer.addChild(saturn.graphics);
 
-    for (const p of saturnOrbit.planets) {
+    worldLayer.addChild(sun.graphics);
+    for (const p of sunOrbit.planets) {
         worldLayer.addChild(p.graphics);
     }
 
-    let time = 0;
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
-        time += dt;
 
-        pluto.x = centerX + Math.sin(globalSpeed * plutoSpeed * time + Math.PI / 2) * 700;
-        pluto.y = centerY + Math.cos(globalSpeed * plutoSpeed * time + Math.PI / 2) * 250;
+        sun.updateGraphics();
+        sunOrbit.update(dt);
 
-        earth.x = centerX + Math.sin(globalSpeed * earthSpeed * time) * 400;
-        earth.y = centerY + Math.cos(globalSpeed * earthSpeed * time) * 100;
-
-        saturn.updateGraphics();
-        saturnOrbit.update(dt);
-
-        earth.zIndex = earth.y;
-        sun.zIndex = sun.y;
-        pluto.zIndex = pluto.y;
     };
 
     app.ticker.add(animate);
 
     return () => {
         app.ticker.remove(animate);
-        earth.destroy();
-        sun.destroy();
+        sun.graphics.destroy();
+        for (const p of sunOrbit.planets) {
+            p.graphics.destroy();
+        }
     };
 }
