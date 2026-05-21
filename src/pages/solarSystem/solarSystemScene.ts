@@ -1,5 +1,23 @@
 import { Application, Graphics, Ticker, Container } from "pixi.js";
 
+const PLANET_COLORS = {
+    sun: "#FFAA33",
+
+    mercury: "#B5B7C0",
+    venus: "#F2C27B",
+    earth: "#2AD4FF",
+    mars: "#FF6B4A",
+
+    jupiter: "#F0B27A",
+    saturn: "#F4DEB3",
+    uranus: "#7EFFFF",
+    neptune: "#5B7FFF",
+
+    moon: "#F0F0F0",
+
+    pluto: "#B08A7A",
+};
+
 class Orbit {
     speed = 1;
     t = 0;
@@ -77,18 +95,18 @@ export function createSolarSystemScene(app: Application) {
     const maxOrbitY = app.screen.height * 0.45;
     const worldLayer = new Container();
 
-    let sun = new Planet("The Sun", 100, "#CC8A10");
+    let sun = new Planet("The Sun", 100, PLANET_COLORS.sun);
     sun.setPosition(app.screen.width / 2, app.screen.height / 2);
 
-    let mercury = new Planet("Mercury", 12, "#BB3300", { w: maxOrbitX * 0.13, h: 300 * 0.13, offset: Math.random() * Math.PI * 2 }, 47.4);
-    let venus = new Planet("Venus", 17, "#EE3300", { w: maxOrbitX * 0.17, h: 300 * 0.17, offset: Math.random() * Math.PI * 2 }, 35);
-    let earth = new Planet("Earth", 18, "#0055FF", { w: maxOrbitX * 0.24, h: 300 * 0.24, offset: Math.random() * Math.PI * 2 }, 29.8);
-    let mars = new Planet("Mars", 12, "#DD3300", { w: maxOrbitX * 0.31, h: 300 * 0.31, offset: Math.random() * Math.PI * 2 }, 24.1);
-    let jupiter = new Planet("Jupiter", 75, "#FF9977", { w: maxOrbitX * 0.42, h: 300 * 0.42, offset: Math.random() * Math.PI * 2 }, 13.1);
-    let saturn = new Planet("Saturn", 75, "#DD9977", { w: maxOrbitX * 0.62, h: 300 * 0.62, offset: Math.random() * Math.PI * 2 }, 9.7);
-    let uranus = new Planet("Uranus", 32, "#10cc97", { w: maxOrbitX * 0.8, h: 300 * 0.8, offset: Math.random() * Math.PI * 2 }, 6.8);
-    let neptune = new Planet("Neptune", 31, "#29D8FF", { w: maxOrbitX * 0.92, h: 300 * 0.92, offset: Math.random() * Math.PI * 2 }, 5.4);
-    let pluto = new Planet("Pluto", 7, "#444444", { w: maxOrbitX * 1.1, h: 300 * 1.1, offset: Math.random() * Math.PI * 2 }, 4.7);
+    let mercury = new Planet("Mercury", 12, PLANET_COLORS.mercury, { w: maxOrbitX * 0.13, h: 300 * 0.13, offset: Math.random() * Math.PI * 2 }, 47.4);
+    let venus = new Planet("Venus", 17, PLANET_COLORS.venus, { w: maxOrbitX * 0.17, h: 300 * 0.17, offset: Math.random() * Math.PI * 2 }, 35);
+    let earth = new Planet("Earth", 18, PLANET_COLORS.earth, { w: maxOrbitX * 0.24, h: 300 * 0.24, offset: Math.random() * Math.PI * 2 }, 29.8);
+    let mars = new Planet("Mars", 12, PLANET_COLORS.mars, { w: maxOrbitX * 0.31, h: 300 * 0.31, offset: Math.random() * Math.PI * 2 }, 24.1);
+    let jupiter = new Planet("Jupiter", 75, PLANET_COLORS.jupiter, { w: maxOrbitX * 0.42, h: 300 * 0.42, offset: Math.random() * Math.PI * 2 }, 13.1);
+    let saturn = new Planet("Saturn", 75, PLANET_COLORS.saturn, { w: maxOrbitX * 0.62, h: 300 * 0.62, offset: Math.random() * Math.PI * 2 }, 9.7);
+    let uranus = new Planet("Uranus", 32, PLANET_COLORS.uranus, { w: maxOrbitX * 0.8, h: 300 * 0.8, offset: Math.random() * Math.PI * 2 }, 6.8);
+    let neptune = new Planet("Neptune", 31, PLANET_COLORS.neptune, { w: maxOrbitX * 0.92, h: 300 * 0.92, offset: Math.random() * Math.PI * 2 }, 5.4);
+    let pluto = new Planet("Pluto", 7, PLANET_COLORS.pluto, { w: maxOrbitX * 1.1, h: 300 * 1.1, offset: Math.random() * Math.PI * 2 }, 4.7);
 
     let sunOrbit = new Orbit(sun.x, sun.y);
     sunOrbit.speed = 0.01;
@@ -103,9 +121,7 @@ export function createSolarSystemScene(app: Application) {
     sunOrbit.planets.push(pluto);
 
     worldLayer.sortableChildren = true;
-
     app.stage.addChild(worldLayer);
-
     worldLayer.addChild(sun.graphics);
     for (const p of sunOrbit.planets) {
         worldLayer.addChild(p.graphics);
