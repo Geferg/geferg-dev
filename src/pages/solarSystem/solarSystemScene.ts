@@ -165,11 +165,15 @@ export function createSolarSystemScene(app: Application) {
         worldLayer.addChild(p.graphics);
     }
 
-    sun.updateGraphics(app.screen.height);
+    sun.updateGraphics();
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
 
-        sunOrbit.update(dt, app.screen.height);
+        for (const p of sunOrbit.planets) {
+            p.visualScale = 0.25 + (p.y / app.screen.height) * 1.5;
+        }
+
+        sunOrbit.update(dt);
     };
 
     app.ticker.add(animate);

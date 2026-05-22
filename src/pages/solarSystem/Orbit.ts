@@ -14,10 +14,10 @@ export class Orbit {
         this.origin.y = y;
     }
 
-    update(dt: number, screenHeight: number) {
+    update(dt: number) {
         this.t += dt;
         this.updatePlanetPositions();
-        this.updatePlanetGraphics(screenHeight);
+        this.updatePlanetGraphics();
     }
 
     updatePlanetPositions() {
@@ -28,11 +28,9 @@ export class Orbit {
         }
     }
 
-    updatePlanetGraphics(screenHeight: number) {
+    updatePlanetGraphics() {
         for (const p of this.planets) {
-            p.updateGraphics(screenHeight);
+            p.updateGraphics();
         }
     }
 }
-
-

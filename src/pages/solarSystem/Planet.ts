@@ -4,23 +4,31 @@ export type OrbitConfig = {
     w: number;
     h: number;
     offset?: number;
-}
+};
 
 export type PlanetConfig = {
     name: string;
     radius: number;
     orbit: OrbitConfig;
     fill?: string;
-    speed?: number;
-}
+    speed?: number
+    scale?: number;
+};
+
+type ResolvedOrbitConfig = {
+    w: number;
+    h: number;
+    offset: number;
+};
 
 export class Planet {
     public name: string;
     public planetRadius: number;
     public fill: string;
-    public orbit: Required<OrbitConfig>;
+    public orbit: ResolvedOrbitConfig;
     public planetSpeed: number;
     public graphics: Graphics;
+    public visualScale: number;
     x = 1;
     y = 1;
 
@@ -29,6 +37,7 @@ export class Planet {
         this.planetRadius = config.radius;
         this.fill = config.fill ?? "#AAAAAAAA";
         this.planetSpeed = config.speed ?? 1;
+        this.visualScale = config.scale ?? 1;
         this.orbit = {
             w: config.orbit.w,
             h: config.orbit.h,
@@ -51,9 +60,9 @@ export class Planet {
         this.y = y;
     }
 
-    updateGraphics(screenHeight: number) {
+    updateGraphics() {
         this.graphics.position.set(this.x, this.y);
-        this.graphics.scale.set(0.25 + (this.y / screenHeight) * 1.5);
+        this.graphics.scale.set(this.visualScale);
         this.graphics.zIndex = this.y;
     }
 }
