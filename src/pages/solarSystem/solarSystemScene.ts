@@ -114,6 +114,7 @@ export function createSolarSystemScene(app: Application) {
     labelLayer.zIndex = 5;
 
     worldLayer.sortableChildren = true;
+    sunLayer.sortableChildren = true;
 
     worldLayer.addChild(backgroundLayer);
     worldLayer.addChild(orbitLayer);
@@ -270,6 +271,7 @@ export function createSolarSystemScene(app: Application) {
     sunOrbit.planets.push(pluto);
 
     sunOrbit.createOrbitPaths();
+    sunOrbit.createSunOverlayPaths(sun.planetRadius);
 
     // Add background noise elements
     const starfield = createStarField(app.screen.width, app.screen.height);
@@ -290,6 +292,17 @@ export function createSolarSystemScene(app: Application) {
         sunLayer.addChild(sun.glow);
     }
     sunLayer.addChild(sun.graphics);
+
+    for (const path of sunOrbit.sunOverlayPaths) {
+        // Force the paths to be above the sun
+        path.zIndex = 9999;
+        sunLayer.addChild(path);
+    }
+
+    for (const path of sunOrbit.orbitPaths) {
+        orbitLayer.addChild(path);
+    }
+
     sunLayer.addChild(sun.label);
 
     for (const p of sunOrbit.planets) {
@@ -302,11 +315,7 @@ export function createSolarSystemScene(app: Application) {
         }
 
         backPlanetLayer.addChild(p.graphics);
-        backPlanetLayer.addChild(p.label);
-    }
-
-    for (const path of sunOrbit.orbitPaths) {
-        orbitLayer.addChild(path);
+        labelLayer.addChild(p.label);
     }
 
     backgroundLayer.addChild(starfield);
@@ -360,6 +369,9 @@ export function createSolarSystemScene(app: Application) {
             p.glow?.destroy();
         }
         for (const path of sunOrbit.orbitPaths) {
+            path.destroy();
+        }
+        for (const path of sunOrbit.sunOverlayPaths) {
             path.destroy();
         }
         starfield.destroy();
