@@ -1,4 +1,4 @@
-import { Application, Graphics, Ticker, Container } from "pixi.js";
+import { Application, Graphics, Ticker, Container, Text } from "pixi.js";
 import { Planet } from "./Planet";
 import { Orbit } from "./Orbit";
 
@@ -36,6 +36,57 @@ function createStarField(width: number, height: number, count = 160) {
 
     stars.zIndex = -10;
     return stars;
+}
+
+function createTerminalWelcome(app: Application) {
+    const fullText = "Welcome to my orbit";
+    const charsPerSecond = 18;
+
+    const container = new Container();
+
+    const text = new Text({
+        text: "",
+        style: {
+            fill: 0x2ad4ff,
+            fontSize: 20,
+            fontFamily: "monospace",
+        },
+    });
+
+    const cursor = new Text({
+        text: "_",
+        style: {
+            fill: 0x2ad4ff,
+            fontSize: 20,
+            fontFamily: "monospace",
+        },
+    });
+
+    container.position.set(app.screen.width / 2 - 110, 32);
+
+    container.addChild(text);
+    container.addChild(cursor);
+
+    let elapsed = 0;
+
+    return {
+        container,
+        cursor,
+
+        update(dt: number) {
+            elapsed += dt;
+
+            const visibleChars = Math.min(
+                fullText.length,
+                Math.floor(elapsed * charsPerSecond),
+            );
+
+            text.text = fullText.slice(0, visibleChars);
+            cursor.position.set(text.width + 8, 0);
+
+            cursor.alpha = Math.floor(performance.now() / 500) % 2 === 0 ? 1 : 0;
+        },
+    };
 }
 
 export function createSolarSystemScene(app: Application) {
@@ -184,6 +235,10 @@ export function createSolarSystemScene(app: Application) {
     // Starfield
     const starfield = createStarField(app.screen.width, app.screen.height);
 
+    // welcome message
+    const welcome = createTerminalWelcome(app);
+    app.stage.addChild(welcome.container);
+
     // Add everything to the world
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
@@ -204,11 +259,14 @@ export function createSolarSystemScene(app: Application) {
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
 
+        welcome.cursor.alpha = Math.floor(performance.now() / 500) % 2 === 0 ? 1 : 0;
+
         for (const p of sunOrbit.planets) {
             p.visualScale = 0.25 + (p.y / app.screen.height) * 1.5;
         }
 
         sunOrbit.update(dt);
+        welcome.update(dt);
     };
 
     app.ticker.add(animate);
@@ -225,5 +283,6 @@ export function createSolarSystemScene(app: Application) {
             path.destroy();
         }
         starfield.destroy();
+        welcome.container.destroy();
     };
 }
