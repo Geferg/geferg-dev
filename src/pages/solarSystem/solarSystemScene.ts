@@ -234,7 +234,6 @@ export function createSolarSystemScene(app: Application) {
     sunOrbit.planets.push(neptune);
     sunOrbit.planets.push(pluto);
 
-    sun.updateGraphics();
     sunOrbit.createOrbitPaths();
 
     // Add background noise elements
@@ -252,6 +251,7 @@ export function createSolarSystemScene(app: Application) {
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
     worldLayer.addChild(sun.graphics);
+    worldLayer.addChild(sun.label);
 
     for (const p of sunOrbit.planets) {
         worldLayer.addChild(p.graphics);
@@ -275,6 +275,7 @@ export function createSolarSystemScene(app: Application) {
             p.visualScale = 0.1 + (p.y / app.screen.height) * 2;
         }
 
+        sun.updateGraphics();
         sunOrbit.update(dt);
         welcome.update(dt);
         comet.update(dt);
@@ -286,6 +287,7 @@ export function createSolarSystemScene(app: Application) {
     return () => {
         app.ticker.remove(animate);
         sun.graphics.destroy();
+        sun.label.destroy();
         for (const p of sunOrbit.planets) {
             p.graphics.destroy();
             p.label.destroy();
