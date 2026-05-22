@@ -40,7 +40,11 @@ function createStarField(width: number, height: number, count = 160) {
 
 function createTerminalWelcome(app: Application) {
     const fullText = "Welcome to my orbit";
+    const fontSize = 32;
+    const monospaceWidthRatio = 0.6;
     const charsPerSecond = 18;
+
+    const estimatedTextWidth = fullText.length * fontSize * monospaceWidthRatio;
 
     const container = new Container();
 
@@ -48,7 +52,7 @@ function createTerminalWelcome(app: Application) {
         text: "",
         style: {
             fill: 0x2ad4ff,
-            fontSize: 20,
+            fontSize: fontSize,
             fontFamily: "monospace",
         },
     });
@@ -57,12 +61,12 @@ function createTerminalWelcome(app: Application) {
         text: "_",
         style: {
             fill: 0x2ad4ff,
-            fontSize: 20,
+            fontSize: fontSize,
             fontFamily: "monospace",
         },
     });
 
-    container.position.set(app.screen.width / 2 - 110, 32);
+    container.position.set(app.screen.width / 2 - estimatedTextWidth / 2, 32);
 
     container.addChild(text);
     container.addChild(cursor);
