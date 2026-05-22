@@ -166,6 +166,10 @@ export function createSolarSystemScene(app: Application) {
     }
 
     sun.updateGraphics();
+    sunOrbit.createOrbitPaths();
+    for (const path of sunOrbit.orbitPaths) {
+        worldLayer.addChild(path);
+    }
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
 
@@ -183,6 +187,9 @@ export function createSolarSystemScene(app: Application) {
         sun.graphics.destroy();
         for (const p of sunOrbit.planets) {
             p.graphics.destroy();
+        }
+        for (const path of sunOrbit.orbitPaths) {
+            path.destroy();
         }
     };
 }
