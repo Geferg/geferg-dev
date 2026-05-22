@@ -20,6 +20,24 @@ const PLANET_COLORS = {
     pluto: "#B08A7A",
 };
 
+function createStarField(width: number, height: number, count = 160) {
+    const stars = new Graphics();
+
+    for (let i = 0; i < count; i++) {
+        const x = Math.random() * width;
+        const y = Math.random() * height;
+        const radius = Math.random() * 1.4 + 0.2;
+        const alpha = Math.random() * 0.45 + 0.15;
+
+        stars
+            .circle(x, y, radius)
+            .fill({ color: 0xffffff, alpha });
+    }
+
+    stars.zIndex = -10;
+    return stars;
+}
+
 export function createSolarSystemScene(app: Application) {
     const maxOrbitX = app.screen.width * 0.5;
     const maxOrbitY = app.screen.height * 0.45;
@@ -163,6 +181,9 @@ export function createSolarSystemScene(app: Application) {
     sun.updateGraphics();
     sunOrbit.createOrbitPaths();
 
+    // Starfield
+    const starfield = createStarField(app.screen.width, app.screen.height);
+
     // Add everything to the world
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
@@ -174,6 +195,8 @@ export function createSolarSystemScene(app: Application) {
     for (const path of sunOrbit.orbitPaths) {
         worldLayer.addChild(path);
     }
+
+    worldLayer.addChild(starfield);
 
     // Main animation loop
     const animate = (ticker: Ticker) => {
@@ -198,5 +221,6 @@ export function createSolarSystemScene(app: Application) {
         for (const path of sunOrbit.orbitPaths) {
             path.destroy();
         }
+        starfield.destroy();
     };
 }
