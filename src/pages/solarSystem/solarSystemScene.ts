@@ -266,7 +266,7 @@ export function createSolarSystemScene(app: Application) {
         welcome.cursor.alpha = Math.floor(performance.now() / 500) % 2 === 0 ? 1 : 0;
 
         for (const p of sunOrbit.planets) {
-            p.visualScale = 0.25 + (p.y / app.screen.height) * 1.5;
+            p.visualScale = 0.1 + (p.y / app.screen.height) * 2;
         }
 
         sunOrbit.update(dt);
