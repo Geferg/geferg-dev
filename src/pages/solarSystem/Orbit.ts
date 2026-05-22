@@ -26,6 +26,10 @@ export class Orbit {
         this.orbitPaths = [];
 
         for (const p of this.planets) {
+            if (p.name === "Pluto") {
+                continue;
+            }
+
             const path = new Graphics()
                 .ellipse(this.origin.x, this.origin.y, p.orbit.w, p.orbit.h)
                 .stroke({ width: 1, color: 0xffffff, alpha: 0.12 });
@@ -38,6 +42,10 @@ export class Orbit {
     updateOrbitPaths() {
         for (let i = 0; i < this.planets.length; i++) {
             const p = this.planets[i];
+
+            if (p?.name === "Pluto") {
+                continue;
+            }
 
             const path = this.orbitPaths[i] ?? new Graphics();
             path.clear();
