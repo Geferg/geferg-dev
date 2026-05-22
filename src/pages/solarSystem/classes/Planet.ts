@@ -17,6 +17,13 @@ export type PlanetConfig = {
         color: number;
         radiusMultiplier?: number;
         alpha?: number;
+    };
+    ring?: {
+        color: number;
+        width?: number;
+        alpha?: number;
+        radiusXMultiplier?: number;
+        radiusYMultiplier?: number;
     }
 };
 
@@ -37,6 +44,7 @@ export class Planet {
     public isHovered: boolean;
     public label: Text;
     public glow?: Graphics;
+    public ring?: Graphics;
     x = 1;
     y = 1;
 
@@ -59,6 +67,7 @@ export class Planet {
             .circle(0, 0, config.radius)
             .fill(this.fill);
 
+        // Glow
         if (config.glow) {
             const radiusMultiplier = config.glow.radiusMultiplier ?? 1.8;
             const alpha = config.glow.alpha ?? 0.16;
@@ -71,6 +80,27 @@ export class Planet {
                 });
 
             this.glow.zIndex = -2;
+        }
+
+        // Ring
+        if (config.ring) {
+            const width = config.ring.width ?? 2;
+            const alpha = config.ring.alpha ?? 0.5;
+            const radiusXMultiplier = config.ring.radiusXMultiplier ?? 1.7;
+            const radiusYMultiplier = config.ring.radiusYMultiplier ?? 0.45;
+
+            this.ring = new Graphics()
+                .ellipse(
+                    0,
+                    0,
+                    this.planetRadius * radiusXMultiplier,
+                    this.planetRadius * radiusYMultiplier,
+                )
+                .stroke({
+                    width,
+                    color: config.ring.color,
+                    alpha,
+                });
         }
 
 
@@ -117,6 +147,12 @@ export class Planet {
         if (this.glow) {
             this.glow.position.set(this.x, this.y);
             this.glow.scale.set(this.visualScale);
+        }
+
+        if (this.ring) {
+            this.ring.position.set(this.x, this.y);
+            this.ring.scale.set(this.visualScale);
+            this.ring.zIndex = this.graphics.zIndex + 0.5;
         }
 
         this.label.position.set(this.x, this.y - this.planetRadius * this.visualScale - 12);

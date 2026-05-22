@@ -187,6 +187,13 @@ export function createSolarSystemScene(app: Application) {
             h: 0.62 * 300,
             offset: Math.random() * Math.PI * 2,
         },
+        ring: {
+            color: 0xf4deb3,
+            width: 2,
+            alpha: 0.45,
+            radiusXMultiplier: 1.55,
+            radiusYMultiplier: 0.35,
+        },
     });
 
     let uranus = new Planet({
@@ -263,6 +270,14 @@ export function createSolarSystemScene(app: Application) {
     worldLayer.addChild(sun.label);
 
     for (const p of sunOrbit.planets) {
+        if (p.ring) {
+            worldLayer.addChild(p.ring);
+        }
+
+        if (p.glow) {
+            worldLayer.addChild(p.glow);
+        }
+
         worldLayer.addChild(p.graphics);
         worldLayer.addChild(p.label);
     }
@@ -300,6 +315,8 @@ export function createSolarSystemScene(app: Application) {
         for (const p of sunOrbit.planets) {
             p.graphics.destroy();
             p.label.destroy();
+            p.ring?.destroy();
+            p.glow?.destroy();
         }
         for (const path of sunOrbit.orbitPaths) {
             path.destroy();
