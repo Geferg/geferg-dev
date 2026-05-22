@@ -25,6 +25,7 @@ export function createSolarSystemScene(app: Application) {
     const maxOrbitY = app.screen.height * 0.45;
     const worldLayer = new Container();
 
+    // Define planets
     let sun = new Planet({
         name: "The Sun",
         radius: 100,
@@ -145,6 +146,7 @@ export function createSolarSystemScene(app: Application) {
         },
     });
 
+    // Construct the solar system
     sun.setPosition(app.screen.width / 2, app.screen.height / 2);
     let sunOrbit = new Orbit(sun.x, sun.y);
     sunOrbit.speed = 0.01;
@@ -158,6 +160,10 @@ export function createSolarSystemScene(app: Application) {
     sunOrbit.planets.push(neptune);
     sunOrbit.planets.push(pluto);
 
+    sun.updateGraphics();
+    sunOrbit.createOrbitPaths();
+
+    // Add everything to the world
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
     worldLayer.addChild(sun.graphics);
@@ -165,11 +171,11 @@ export function createSolarSystemScene(app: Application) {
         worldLayer.addChild(p.graphics);
     }
 
-    sun.updateGraphics();
-    sunOrbit.createOrbitPaths();
     for (const path of sunOrbit.orbitPaths) {
         worldLayer.addChild(path);
     }
+
+    // Main animation loop
     const animate = (ticker: Ticker) => {
         const dt = ticker.deltaMS / 1000;
 
@@ -182,6 +188,7 @@ export function createSolarSystemScene(app: Application) {
 
     app.ticker.add(animate);
 
+    // Destructor
     return () => {
         app.ticker.remove(animate);
         sun.graphics.destroy();
