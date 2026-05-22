@@ -13,6 +13,11 @@ export type PlanetConfig = {
     fill?: string;
     speed?: number
     scale?: number;
+    glow?: {
+        color: number;
+        radiusMultiplier?: number;
+        alpha?: number;
+    }
 };
 
 type ResolvedOrbitConfig = {
@@ -31,6 +36,7 @@ export class Planet {
     public visualScale: number;
     public isHovered: boolean;
     public label: Text;
+    public glow?: Graphics;
     x = 1;
     y = 1;
 
@@ -48,11 +54,30 @@ export class Planet {
             offset: config.orbit.offset ?? Math.PI,
         }
 
+        // Main planet graphics
         this.graphics = new Graphics()
             .circle(0, 0, config.radius)
             .fill(this.fill);
+
+        if (config.glow) {
+            const radiusMultiplier = config.glow.radiusMultiplier ?? 1.8;
+            const alpha = config.glow.alpha ?? 0.16;
+
+            this.glow = new Graphics()
+                .circle(0, 0, this.planetRadius * radiusMultiplier)
+                .fill({
+                    color: config.glow?.color,
+                    alpha,
+                });
+
+            this.glow.zIndex = -2;
+        }
+
+
+        // Hover
         this.graphics.eventMode = "static";
         this.graphics.cursor = "pointer";
+
         this.graphics.on("pointerenter", () => {
             this.isHovered = true;
         })
@@ -88,6 +113,11 @@ export class Planet {
         this.graphics.position.set(this.x, this.y);
         this.graphics.scale.set(this.visualScale);
         this.graphics.zIndex = this.y;
+
+        if (this.glow) {
+            this.glow.position.set(this.x, this.y);
+            this.glow.scale.set(this.visualScale);
+        }
 
         this.label.position.set(this.x, this.y - this.planetRadius * this.visualScale - 12);
         this.label.alpha = this.isHovered ? 0.85 : 0;

@@ -108,6 +108,11 @@ export function createSolarSystemScene(app: Application) {
             w: 0,
             h: 0,
             offset: 0,
+        },
+        glow: {
+            color: 0xffaa33,
+            radiusMultiplier: 1.3,
+            alpha: 0.12
         }
     });
 
@@ -250,6 +255,10 @@ export function createSolarSystemScene(app: Application) {
     // Add everything to the world
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
+
+    if (sun.glow) {
+        worldLayer.addChild(sun.glow);
+    }
     worldLayer.addChild(sun.graphics);
     worldLayer.addChild(sun.label);
 
