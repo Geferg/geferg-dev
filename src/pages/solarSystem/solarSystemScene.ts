@@ -99,6 +99,29 @@ export function createSolarSystemScene(app: Application) {
     const maxOrbitY = app.screen.height * 0.45;
     const worldLayer = new Container();
 
+    const backgroundLayer = new Container();
+    const orbitLayer = new Container();
+    const backPlanetLayer = new Container();
+    const sunLayer = new Container();
+    const frontPlanetLayer = new Container();
+    const labelLayer = new Container();
+
+    backgroundLayer.zIndex = 0;
+    orbitLayer.zIndex = 1;
+    backPlanetLayer.zIndex = 2;
+    sunLayer.zIndex = 3;
+    frontPlanetLayer.zIndex = 4;
+    labelLayer.zIndex = 5;
+
+    worldLayer.sortableChildren = true;
+
+    worldLayer.addChild(backgroundLayer);
+    worldLayer.addChild(orbitLayer);
+    worldLayer.addChild(backPlanetLayer);
+    worldLayer.addChild(sunLayer);
+    worldLayer.addChild(frontPlanetLayer);
+    worldLayer.addChild(labelLayer);
+
     // Define planets
     let sun = new Planet({
         name: "The Sun",
@@ -264,30 +287,30 @@ export function createSolarSystemScene(app: Application) {
     app.stage.addChild(worldLayer);
 
     if (sun.glow) {
-        worldLayer.addChild(sun.glow);
+        sunLayer.addChild(sun.glow);
     }
-    worldLayer.addChild(sun.graphics);
-    worldLayer.addChild(sun.label);
+    sunLayer.addChild(sun.graphics);
+    sunLayer.addChild(sun.label);
 
     for (const p of sunOrbit.planets) {
         if (p.ring) {
-            worldLayer.addChild(p.ring);
+            backPlanetLayer.addChild(p.ring);
         }
 
         if (p.glow) {
-            worldLayer.addChild(p.glow);
+            backPlanetLayer.addChild(p.glow);
         }
 
-        worldLayer.addChild(p.graphics);
-        worldLayer.addChild(p.label);
+        backPlanetLayer.addChild(p.graphics);
+        backPlanetLayer.addChild(p.label);
     }
 
     for (const path of sunOrbit.orbitPaths) {
-        worldLayer.addChild(path);
+        orbitLayer.addChild(path);
     }
 
-    worldLayer.addChild(starfield);
-    worldLayer.addChild(comet.graphics);
+    backgroundLayer.addChild(starfield);
+    backgroundLayer.addChild(comet.graphics);
 
     // Main animation loop
     const animate = (ticker: Ticker) => {
@@ -303,6 +326,24 @@ export function createSolarSystemScene(app: Application) {
         sunOrbit.update(dt);
         welcome.update(dt);
         comet.update(dt);
+
+        for (const p of sunOrbit.planets) {
+            const targetLayer = p.y < sun.y
+                ? backPlanetLayer
+                : frontPlanetLayer;
+
+            if (p.graphics.parent !== targetLayer) {
+                targetLayer.addChild(p.graphics);
+            }
+
+            if (p.ring && p.ring.parent !== targetLayer) {
+                targetLayer.addChild(p.ring);
+            }
+
+            if (p.glow && p.glow.parent !== targetLayer) {
+                targetLayer.addChild(p.glow);
+            }
+        }
     };
 
     app.ticker.add(animate);
