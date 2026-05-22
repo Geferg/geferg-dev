@@ -1,4 +1,4 @@
-import { Graphics } from "pixi.js";
+import { Graphics, Text } from "pixi.js";
 
 export type OrbitConfig = {
     w: number;
@@ -29,6 +29,8 @@ export class Planet {
     public planetSpeed: number;
     public graphics: Graphics;
     public visualScale: number;
+    public isHovered: boolean;
+    public label: Text;
     x = 1;
     y = 1;
 
@@ -38,14 +40,36 @@ export class Planet {
         this.fill = config.fill ?? "#AAAAAAAA";
         this.planetSpeed = config.speed ?? 1;
         this.visualScale = config.scale ?? 1;
+        this.isHovered = false;
+
         this.orbit = {
             w: config.orbit.w,
             h: config.orbit.h,
             offset: config.orbit.offset ?? Math.PI,
         }
+
         this.graphics = new Graphics()
             .circle(0, 0, config.radius)
             .fill(this.fill);
+        this.graphics.eventMode = "static";
+        this.graphics.cursor = "pointer";
+        this.graphics.on("pointerenter", () => {
+            this.isHovered = true;
+        })
+        this.graphics.on("pointerleave", () => {
+            this.isHovered = false;
+        })
+
+        this.label = new Text({
+            text: this.name,
+            style: {
+                fill: 0xffffff,
+                fontSize: 13,
+                fontFamily: "monospace",
+            },
+        });
+        this.label.alpha = 0;
+        this.label.anchor.set(0.5);
     }
 
     get position() {
@@ -64,5 +88,9 @@ export class Planet {
         this.graphics.position.set(this.x, this.y);
         this.graphics.scale.set(this.visualScale);
         this.graphics.zIndex = this.y;
+
+        this.label.position.set(this.x, this.y - this.planetRadius * this.visualScale - 12);
+        this.label.alpha = this.isHovered ? 0.85 : 0;
+        this.label.zIndex = this.graphics.zIndex + 1;
     }
 }

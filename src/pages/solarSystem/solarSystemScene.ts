@@ -188,8 +188,10 @@ export function createSolarSystemScene(app: Application) {
     worldLayer.sortableChildren = true;
     app.stage.addChild(worldLayer);
     worldLayer.addChild(sun.graphics);
+
     for (const p of sunOrbit.planets) {
         worldLayer.addChild(p.graphics);
+        worldLayer.addChild(p.label);
     }
 
     for (const path of sunOrbit.orbitPaths) {
@@ -217,6 +219,7 @@ export function createSolarSystemScene(app: Application) {
         sun.graphics.destroy();
         for (const p of sunOrbit.planets) {
             p.graphics.destroy();
+            p.label.destroy();
         }
         for (const path of sunOrbit.orbitPaths) {
             path.destroy();
