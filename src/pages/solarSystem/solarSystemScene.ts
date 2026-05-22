@@ -1,6 +1,7 @@
 import { Application, Graphics, Ticker, Container, Text } from "pixi.js";
-import { Planet } from "./Planet";
-import { Orbit } from "./Orbit";
+import { Planet } from "./classes/Planet";
+import { Orbit } from "./classes/Orbit";
+import { Comet } from "./classes/Comet";
 
 const PLANET_COLORS = {
     sun: "#FFAA33",
@@ -236,8 +237,12 @@ export function createSolarSystemScene(app: Application) {
     sun.updateGraphics();
     sunOrbit.createOrbitPaths();
 
-    // Starfield
+    // Add background noise elements
     const starfield = createStarField(app.screen.width, app.screen.height);
+    const comet = new Comet({
+        screenWidth: app.screen.width,
+        screenHeight: app.screen.height,
+    });
 
     // welcome message
     const welcome = createTerminalWelcome(app);
@@ -258,6 +263,7 @@ export function createSolarSystemScene(app: Application) {
     }
 
     worldLayer.addChild(starfield);
+    worldLayer.addChild(comet.graphics);
 
     // Main animation loop
     const animate = (ticker: Ticker) => {
@@ -271,6 +277,7 @@ export function createSolarSystemScene(app: Application) {
 
         sunOrbit.update(dt);
         welcome.update(dt);
+        comet.update(dt);
     };
 
     app.ticker.add(animate);
@@ -288,5 +295,6 @@ export function createSolarSystemScene(app: Application) {
         }
         starfield.destroy();
         welcome.container.destroy();
+        comet.destroy();
     };
 }
