@@ -2,6 +2,7 @@ import Footer from "./components/footer";
 import Header from "./components/header";
 import "./index.css";
 import NotFoundPage from "./pages/NotFoundPage";
+import ProjectsPage from "./pages/projects";
 import SolarSystem from "./pages/solarSystem/solarSystem";
 
 export function App() {
@@ -15,6 +16,7 @@ export function App() {
 function renderPage(pathname: string) {
     switch (pathname) {
         case "/": return <SolarSystem />;
+        case "/projects": return <ProjectsPage />
         default: return <NotFoundPage />;
     }
 }
