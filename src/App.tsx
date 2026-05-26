@@ -3,7 +3,7 @@ import Header from "./components/header";
 import "./index.css";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProjectsPage from "./pages/projects";
-import SolarSystem from "./pages/solarSystem/solarSystem";
+import SolarSystemPage from "./pages/solarSystem";
 
 export function App() {
     return (
@@ -15,7 +15,7 @@ export function App() {
 
 function renderPage(pathname: string) {
     switch (pathname) {
-        case "/": return <SolarSystem />;
+        case "/": return <SolarSystemPage />;
         case "/projects": return <ProjectsPage />
         default: return <NotFoundPage />;
     }
