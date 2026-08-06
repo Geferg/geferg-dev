@@ -14,7 +14,7 @@ import type {
     SequenceKey,
     TypingEvent,
     ZmkGraphicProps,
-} from "./types";
+} from "./zmkGraphic.types";
 
 const KEY_WIDTH = 34;
 const KEY_HEIGHT = 22;

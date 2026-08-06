@@ -1,4 +1,4 @@
-export { default } from "./zmkGraphic";
+export { default } from "./ZmkGraphic";
 
 export type {
     KeyAccent,
@@ -8,4 +8,4 @@ export type {
     SequenceKey,
     TypingEvent,
     ZmkGraphicProps,
-} from "./types";
+} from "./zmkGraphic.types";
