@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import type { ProjectCardData } from "./projectData";
 import ProjectGraphic from "./projectGraphics";
 
@@ -6,10 +8,30 @@ type ProjectCardProps = {
 };
 
 export default function ProjectCard({ project }: ProjectCardProps) {
+    const [isPointerActive, setIsPointerActive] = useState(false);
+    const [isFocusActive, setIsFocusActive] = useState(false);
+
+    const isActive = isPointerActive || isFocusActive;
+
     const card = (
-        <article className="group relative h-64 overflow-hidden rounded-2xl border border-border bg-card p-6 shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-foreground/20 hover:shadow-lg">
+        <article
+            data-active={isActive ? "true" : "false"}
+            onPointerEnter={() => setIsPointerActive(true)}
+            onPointerLeave={() => setIsPointerActive(false)}
+            onPointerCancel={() => setIsPointerActive(false)}
+            className={[
+                "group relative h-64 overflow-hidden rounded-2xl border bg-card p-6",
+                "translate-y-0 transition-[transform,border-color,box-shadow] duration-300 ease-out",
+                isActive
+                    ? "-translate-y-0.5 border-foreground/20 shadow-lg"
+                    : "border-border shadow-sm",
+            ].join(" ")}
+        >
             <div
-                className="pointer-events-none absolute inset-0 opacity-10 transition-opacity duration-300 group-hover:opacity-20"
+                className={[
+                    "pointer-events-none absolute inset-0 transition-opacity duration-300 ease-out",
+                    isActive ? "opacity-20" : "opacity-10",
+                ].join(" ")}
                 style={{
                     background: `radial-gradient(circle at 82% 18%, ${project.accent}, transparent 36%)`,
                 }}
@@ -19,6 +41,7 @@ export default function ProjectCard({ project }: ProjectCardProps) {
                 <ProjectGraphic
                     type={project.graphic}
                     accent={project.accent}
+                    active={isActive}
                 />
 
                 <div className="mt-auto">
@@ -45,6 +68,8 @@ export default function ProjectCard({ project }: ProjectCardProps) {
     return (
         <a
             href={project.path}
+            onFocus={() => setIsFocusActive(true)}
+            onBlur={() => setIsFocusActive(false)}
             className="block focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
             {card}
