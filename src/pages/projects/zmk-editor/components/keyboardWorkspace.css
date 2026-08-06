@@ -117,7 +117,7 @@
 
 .zmk-editor-key--modifier { border-color: color-mix(in srgb, #e86671 66%, transparent); }
 .zmk-editor-key--layer { border-color: color-mix(in srgb, #f0a13a 70%, transparent); }
-.zmk-editor-key--system { border-color: color-mix(in srgb, #36d9ff 62%, transparent); }
+.zmk-editor-key--system { border-color: color-mix(in srgb, #f4deb3 62%, transparent); }
 .zmk-editor-key--rgb { border-color: color-mix(in srgb, #c678dd 66%, transparent); }
 .zmk-editor-key--nordic { border-color: color-mix(in srgb, #62d394 68%, transparent); }
 .zmk-editor-key--transparent { border-style: dashed; opacity: 0.62; }
@@ -144,7 +144,7 @@
 
 .zmk-editor-legend [data-category="modifier"] { color: #e86671; }
 .zmk-editor-legend [data-category="layer"] { color: #f0a13a; }
-.zmk-editor-legend [data-category="system"] { color: #36d9ff; }
+.zmk-editor-legend [data-category="system"] { color: #f4deb3; }
 .zmk-editor-legend [data-category="rgb"] { color: #c678dd; }
 .zmk-editor-legend [data-category="nordic"] { color: #62d394; }
 
