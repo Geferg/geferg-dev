@@ -17,6 +17,7 @@ function renderPage(pathname: string) {
     switch (pathname) {
         case "/": return <SolarSystemPage />;
         case "/projects": return <ProjectsPage />
+        // case "/projects/zmk-editor": return </>
         default: return <NotFoundPage />;
     }
 }

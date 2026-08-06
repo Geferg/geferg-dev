@@ -3,6 +3,7 @@ import type { ProjectCardGraphicType } from "../projectData";
 import AudioGraphic from "./audioGraphic";
 import PlaceholderGraphic from "./placeholderGraphic";
 import RegexGraphic from "./regexGraphic";
+import ZmkGraphic from "./zmkGraphic";
 
 type ProjectCardGraphicProps = {
     type: ProjectCardGraphicType;
@@ -18,6 +19,7 @@ export default function ProjectGraphic({
     switch (type) {
         case "regex": return <RegexGraphic accent={accent} />;
         case "audio": return <AudioGraphic accent={accent} />;
+        case "zmk": return <ZmkGraphic active={active} />;
         default: return <PlaceholderGraphic accent={accent} />;
     }
 }
