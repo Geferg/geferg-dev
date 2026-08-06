@@ -1,4 +1,4 @@
-export type ProjectCardGraphicType = "regex" | "audio" | "placeholder";
+export type ProjectCardGraphicType = "regex" | "audio" | "zmk" | "placeholder";
 
 export type ProjectStatus = "Coming soon" | "Available";
 
@@ -29,11 +29,12 @@ export const projects: ProjectCardData[] = [
         accent: "#C678DD",
     },
     {
-        title: "Coming Soon",
-        description: "Reserved project slot.",
-        status: "Coming soon",
-        graphic: "placeholder",
-        accent: "#8A8F98",
+        title: "ZMK Layout Editor",
+        description: "Design an exportable layered ZMK layout",
+        status: "Available",
+        graphic: "zmk",
+        accent: "#36D9FF",
+        path: "/projects/zmk-editor",
     },
     {
         title: "Coming Soon",
