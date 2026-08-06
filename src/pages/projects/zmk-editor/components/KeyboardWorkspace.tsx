@@ -1,8 +1,10 @@
 import type { KeyCategory, ZmkEditorState } from "../zmkEditor.types";
 import {
     CATEGORY_LABELS,
+    COVERAGE_CHARACTERS,
     KEY_COUNT,
-    deriveLabel,
+    getKeyCategory,
+    getKeyLabel,
     getKeyPosition,
 } from "../logic/zmkEditor.data";
 
@@ -21,10 +23,16 @@ const categoryClasses: Record<KeyCategory, string> = {
 
 export default function KeyboardWorkspace({
     state,
+    coveredCharacters,
+    coverageExpanded,
     onSelectKey,
+    onToggleCoverage,
 }: {
     state: ZmkEditorState;
+    coveredCharacters: Set<string>;
+    coverageExpanded: boolean;
     onSelectKey: (index: number) => void;
+    onToggleCoverage: () => void;
 }) {
     const layer = state.layers[state.currentLayer];
 
@@ -61,11 +69,14 @@ export default function KeyboardWorkspace({
                     <div className="zmk-editor-keyboard">
                         {layer.keys.map((key, index) => {
                             const position = getKeyPosition(index);
+                            const label = getKeyLabel(key);
+                            const category = getKeyCategory(key);
+
                             return (
                                 <button
                                     key={index}
                                     type="button"
-                                    className={`zmk-editor-key ${categoryClasses[key.category]}`}
+                                    className={`zmk-editor-key ${categoryClasses[category]}`}
                                     data-selected={index === state.selectedKey}
                                     style={{
                                         left: `${position.x / 10}%`,
@@ -77,7 +88,7 @@ export default function KeyboardWorkspace({
                                     onClick={() => onSelectKey(index)}
                                 >
                                     <span className="zmk-editor-key__label">
-                                        {key.label || deriveLabel(key.binding)}
+                                        {label}
                                     </span>
                                     {state.showBindings && (
                                         <span className="zmk-editor-key__binding">
@@ -91,7 +102,7 @@ export default function KeyboardWorkspace({
                 </div>
             </div>
 
-            <div className="zmk-editor-legend">
+            <div className="zmk-editor-legend" aria-label="Key category legend">
                 {(["modifier", "layer", "system", "rgb", "nordic"] as KeyCategory[])
                     .map((category) => (
                         <span key={category} data-category={category}>
@@ -99,6 +110,58 @@ export default function KeyboardWorkspace({
                         </span>
                     ))}
             </div>
+
+            <CoveragePanel
+                coveredCharacters={coveredCharacters}
+                expanded={coverageExpanded}
+                onToggle={onToggleCoverage}
+            />
+        </section>
+    );
+}
+
+function CoveragePanel({
+    coveredCharacters,
+    expanded,
+    onToggle,
+}: {
+    coveredCharacters: Set<string>;
+    expanded: boolean;
+    onToggle: () => void;
+}) {
+    return (
+        <section className="zmk-editor-workspace__coverage">
+            <button
+                type="button"
+                className="zmk-editor-workspace__coverage-summary"
+                aria-expanded={expanded}
+                onClick={onToggle}
+            >
+                <span>
+                    <strong>Character coverage</strong>
+                    <small>Visible-label checklist across all layers</small>
+                </span>
+
+                <span className="font-mono text-xs text-muted-foreground">
+                    {coveredCharacters.size}/{COVERAGE_CHARACTERS.length}
+                    <span aria-hidden="true" className="ml-3">
+                        {expanded ? "−" : "+"}
+                    </span>
+                </span>
+            </button>
+
+            {expanded && (
+                <div className="zmk-editor-workspace__coverage-grid">
+                    {COVERAGE_CHARACTERS.map((character) => (
+                        <span
+                            key={character}
+                            data-present={coveredCharacters.has(character)}
+                        >
+                            {character}
+                        </span>
+                    ))}
+                </div>
+            )}
         </section>
     );
 }
