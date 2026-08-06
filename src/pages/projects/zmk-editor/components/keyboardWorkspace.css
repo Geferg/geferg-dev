@@ -1,0 +1,154 @@
+.zmk-editor-workspace {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    background: color-mix(in srgb, var(--card) 84%, transparent);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 1.5%);
+}
+
+.zmk-editor-workspace__meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 1.1rem 0;
+}
+
+.zmk-editor-workspace__meta > div {
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+}
+
+.zmk-editor-keyboard-scroll {
+    overflow-x: auto;
+    padding: 0.5rem 0.8rem 0;
+}
+
+.zmk-editor-keyboard-wrap {
+    position: relative;
+    min-width: 880px;
+}
+
+.zmk-editor-keyboard-orbits {
+    pointer-events: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+.zmk-editor-keyboard-orbits ellipse,
+.zmk-editor-keyboard-orbits line {
+    fill: none;
+    stroke: color-mix(in srgb, var(--foreground) 5.5%, transparent);
+    stroke-width: 1;
+}
+
+.zmk-editor-keyboard-orbits line { stroke-dasharray: 4 8; }
+
+.zmk-editor-keyboard {
+    position: relative;
+    width: 100%;
+    min-height: 360px;
+    aspect-ratio: 1000 / 410;
+}
+
+.zmk-editor-key {
+    position: absolute;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid color-mix(in srgb, var(--foreground) 20%, transparent);
+    border-radius: 0.55rem;
+    background: color-mix(in srgb, var(--background) 54%, var(--card));
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 22%), 0 7px 16px rgb(0 0 0 / 11%);
+    color: var(--foreground);
+    text-align: center;
+    transition: transform 140ms ease, border-color 160ms ease,
+        background-color 160ms ease, box-shadow 160ms ease;
+}
+
+.zmk-editor-key:hover {
+    z-index: 4;
+    transform: translateY(-1px);
+    border-color: color-mix(in srgb, var(--primary) 58%, transparent);
+    background: color-mix(in srgb, var(--primary) 5%, var(--card));
+}
+
+.zmk-editor-key[data-selected="true"] {
+    z-index: 5;
+    transform: translateY(-1px);
+    border-color: var(--primary);
+    box-shadow: inset 0 -3px 0 rgb(0 0 0 / 20%),
+        0 0 0 2px color-mix(in srgb, var(--primary) 18%, transparent),
+        0 8px 22px rgb(0 0 0 / 16%);
+}
+
+.zmk-editor-key__label {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 0 0.22rem;
+    font-size: clamp(0.62rem, 1.05vw, 0.95rem);
+    font-weight: 700;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-key__binding {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    margin-top: 0.28rem;
+    padding: 0 0.2rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: clamp(0.44rem, 0.63vw, 0.62rem);
+    line-height: 1.05;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-key--modifier { border-color: color-mix(in srgb, #e86671 66%, transparent); }
+.zmk-editor-key--layer { border-color: color-mix(in srgb, #f0a13a 70%, transparent); }
+.zmk-editor-key--system { border-color: color-mix(in srgb, #36d9ff 62%, transparent); }
+.zmk-editor-key--rgb { border-color: color-mix(in srgb, #c678dd 66%, transparent); }
+.zmk-editor-key--nordic { border-color: color-mix(in srgb, #62d394 68%, transparent); }
+.zmk-editor-key--transparent { border-style: dashed; opacity: 0.62; }
+.zmk-editor-key--none { border-style: dotted; opacity: 0.45; }
+
+.zmk-editor-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+    padding: 0.2rem 1.1rem 1rem;
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-legend span::before {
+    display: inline-block;
+    width: 0.5rem;
+    height: 0.5rem;
+    margin-right: 0.35rem;
+    border: 1px solid currentColor;
+    border-radius: 0.15rem;
+    content: "";
+}
+
+.zmk-editor-legend [data-category="modifier"] { color: #e86671; }
+.zmk-editor-legend [data-category="layer"] { color: #f0a13a; }
+.zmk-editor-legend [data-category="system"] { color: #36d9ff; }
+.zmk-editor-legend [data-category="rgb"] { color: #c678dd; }
+.zmk-editor-legend [data-category="nordic"] { color: #62d394; }
+
+@media (max-width: 760px) {
+    .zmk-editor-workspace__meta {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

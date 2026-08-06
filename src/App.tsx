@@ -4,6 +4,7 @@ import "./index.css";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProjectsPage from "./pages/projects";
 import SolarSystemPage from "./pages/solarSystem";
+import ZmkEditorPage from "./pages/projects/zmk-editor";
 
 export function App() {
     return (
@@ -17,7 +18,7 @@ function renderPage(pathname: string) {
     switch (pathname) {
         case "/": return <SolarSystemPage />;
         case "/projects": return <ProjectsPage />
-        // case "/projects/zmk-editor": return </>
+        case "/projects/zmk-editor": return < ZmkEditorPage/>
         default: return <NotFoundPage />;
     }
 }
