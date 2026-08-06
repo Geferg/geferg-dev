@@ -1,9 +1,9 @@
-import type { ProjectCardGraphicType } from "../projectData";
-
 import AudioGraphic from "./audioGraphic";
 import PlaceholderGraphic from "./placeholderGraphic";
 import RegexGraphic from "./regexGraphic";
 import ZmkGraphic from "./zmkGraphic";
+
+import type { ProjectCardGraphicType } from "../projectData";
 
 type ProjectCardGraphicProps = {
     type: ProjectCardGraphicType;
