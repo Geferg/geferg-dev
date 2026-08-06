@@ -1,5 +1,7 @@
 .zmk-editor-workspace {
+    display: flex;
     min-width: 0;
+    flex-direction: column;
     overflow: hidden;
     border: 1px solid var(--border);
     border-radius: 1rem;
@@ -151,4 +153,71 @@
         align-items: flex-start;
         flex-direction: column;
     }
+}
+
+
+.zmk-editor-workspace__coverage {
+    margin-top: auto;
+    border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.zmk-editor-workspace__coverage-summary {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.95rem 1.1rem;
+    text-align: left;
+    color: var(--muted-foreground);
+    transition:
+        background-color 160ms ease,
+        color 160ms ease;
+}
+
+.zmk-editor-workspace__coverage-summary:hover,
+.zmk-editor-workspace__coverage-summary[aria-expanded="true"] {
+    background: color-mix(in srgb, var(--foreground) 2.5%, transparent);
+    color: var(--foreground);
+}
+
+.zmk-editor-workspace__coverage-summary strong,
+.zmk-editor-workspace__coverage-summary small {
+    display: block;
+}
+
+.zmk-editor-workspace__coverage-summary strong {
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.zmk-editor-workspace__coverage-summary small {
+    margin-top: 0.15rem;
+    font-size: 0.66rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-workspace__coverage-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(2rem, 1fr));
+    gap: 0.35rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    padding: 0.85rem 1.1rem 1rem;
+}
+
+.zmk-editor-workspace__coverage-grid span {
+    display: grid;
+    min-height: 2rem;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 0.45rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-workspace__coverage-grid span[data-present="true"] {
+    border-color: color-mix(in srgb, #62d394 48%, transparent);
+    background: color-mix(in srgb, #62d394 6%, transparent);
+    color: #62d394;
 }

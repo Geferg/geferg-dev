@@ -8,10 +8,14 @@ export type KeyCategory =
     | "transparent"
     | "none";
 
+/**
+ * Binding is the source of truth. Presentation fields are explicit overrides
+ * and are omitted when automatic derivation is sufficient.
+ */
 export type ZmkKey = {
     binding: string;
-    label: string;
-    category: KeyCategory;
+    labelOverride?: string;
+    categoryOverride?: KeyCategory;
 };
 
 export type ZmkLayer = {
@@ -33,8 +37,8 @@ export type ZmkEditorState = {
 export type QuickBinding = {
     name: string;
     binding: string;
-    label: string;
-    category: KeyCategory;
+    label?: string;
+    category?: KeyCategory;
 };
 
 export type QuickBindingGroup = {

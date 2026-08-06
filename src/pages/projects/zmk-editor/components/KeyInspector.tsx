@@ -4,11 +4,14 @@ import type {
     ZmkEditorState,
     ZmkKey,
 } from "../zmkEditor.types";
+
 import {
     CATEGORY_LABELS,
     QUICK_BINDING_GROUPS,
+    createKey,
     deriveLabel,
-    inferCategory,
+    getKeyCategory,
+    getKeyLabel,
     sanitizeConstant,
 } from "../logic/zmkEditor.data";
 
@@ -19,6 +22,7 @@ export default function KeyInspector({
     onEndEdit,
     onUpdateKey,
     onCommitKey,
+    onReplaceKey,
     onApplyQuickBinding,
     onUpdateState,
 }: {
@@ -28,11 +32,26 @@ export default function KeyInspector({
     onEndEdit: () => void;
     onUpdateKey: (patch: Partial<ZmkKey>) => void;
     onCommitKey: (patch: Partial<ZmkKey>) => void;
+    onReplaceKey: (key: ZmkKey) => void;
     onApplyQuickBinding: (binding: QuickBinding) => void;
     onUpdateState: (mutator: (draft: ZmkEditorState) => void) => void;
 }) {
-    const row = state.selectedKey < 36 ? Math.floor(state.selectedKey / 12) + 1 : 4;
-    const column = state.selectedKey < 36 ? (state.selectedKey % 12) + 1 : state.selectedKey - 35;
+    const row = state.selectedKey < 36
+        ? Math.floor(state.selectedKey / 12) + 1
+        : 4;
+    const column = state.selectedKey < 36
+        ? (state.selectedKey % 12) + 1
+        : state.selectedKey - 35;
+
+    const derivedLabel = deriveLabel(selectedKey.binding);
+    const displayedLabel = getKeyLabel(selectedKey);
+    const effectiveCategory = getKeyCategory(selectedKey);
+    const automaticCategory = getKeyCategory({
+        ...selectedKey,
+        categoryOverride: undefined,
+    });
+    const hasLabelOverride = selectedKey.labelOverride !== undefined;
+    const hasCategoryOverride = selectedKey.categoryOverride !== undefined;
 
     return (
         <aside className="zmk-editor-inspector">
@@ -41,49 +60,19 @@ export default function KeyInspector({
                     <span className="zmk-editor-kicker">
                         KEY {String(state.selectedKey + 1).padStart(2, "0")}
                     </span>
-                    <h2>{selectedKey.label || "Unnamed key"}</h2>
+                    <h2>{displayedLabel || "Unnamed key"}</h2>
                 </div>
-                <span className="font-mono text-[11px] text-muted-foreground">
-                    row {row} · col {column}
-                </span>
-            </div>
-
-            <div className="zmk-editor-field">
-                <label htmlFor="displayLabel">Display label</label>
-                <div className="zmk-editor-input-row">
-                    <input
-                        id="displayLabel"
-                        type="text"
-                        value={selectedKey.label}
-                        maxLength={18}
-                        onFocus={onBeginEdit}
-                        onBlur={onEndEdit}
-                        onChange={(event) => {
-                            const label = event.target.value;
-                            onUpdateKey({
-                                label,
-                                category: inferCategory(selectedKey.binding, label),
-                            });
-                        }}
-                    />
-                    <button
-                        type="button"
-                        className="zmk-editor-icon-button"
-                        title="Derive label from binding"
-                        onClick={() => {
-                            const label = deriveLabel(selectedKey.binding);
-                            onCommitKey({
-                                label,
-                                category: inferCategory(selectedKey.binding, label),
-                            });
-                        }}
-                    >
-                        ↻
-                    </button>
+                <div className="zmk-editor-inspector__identity">
+                    <span className="font-mono text-[11px] text-muted-foreground">
+                        row {row} · col {column}
+                    </span>
+                    <span className="zmk-editor-category-badge">
+                        {CATEGORY_LABELS[effectiveCategory]}
+                    </span>
                 </div>
             </div>
 
-            <div className="zmk-editor-field">
+            <div className="zmk-editor-field zmk-editor-field--primary">
                 <label htmlFor="binding">ZMK binding</label>
                 <input
                     id="binding"
@@ -93,51 +82,119 @@ export default function KeyInspector({
                     onFocus={onBeginEdit}
                     onBlur={onEndEdit}
                     onChange={(event) => {
-                        const binding = event.target.value;
-                        const label = deriveLabel(binding);
-                        onUpdateKey({
-                            binding,
-                            label,
-                            category: inferCategory(binding, label),
-                        });
+                        onUpdateKey({ binding: event.target.value });
                     }}
                 />
                 <p>
-                    Labels and categories follow the binding automatically.
-                    Override the label above when needed.
+                    The visible label and category are derived automatically unless an
+                    override is set below.
                 </p>
             </div>
 
-            <div className="zmk-editor-field">
-                <label htmlFor="category">Category</label>
-                <select
-                    id="category"
-                    value={selectedKey.category}
-                    onChange={(event) =>
-                        onCommitKey({ category: event.target.value as KeyCategory })
-                    }
-                >
-                    {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                    ))}
-                </select>
+            <div className="zmk-editor-override-panel">
+                <div className="zmk-editor-inspector__subhead">
+                    <div>
+                        <h3>Presentation overrides</h3>
+                        <span>Optional display-only adjustments</span>
+                    </div>
+                    {(hasLabelOverride || hasCategoryOverride) && (
+                        <button
+                            type="button"
+                            className="zmk-editor-text-button"
+                            onClick={() => onCommitKey({
+                                labelOverride: undefined,
+                                categoryOverride: undefined,
+                            })}
+                        >
+                            Use automatic
+                        </button>
+                    )}
+                </div>
+
+                <div className="zmk-editor-field zmk-editor-field--secondary">
+                    <label htmlFor="displayLabel">
+                        Display label override
+                        <span>optional</span>
+                    </label>
+                    <div className="zmk-editor-input-row">
+                        <input
+                            id="displayLabel"
+                            type="text"
+                            value={selectedKey.labelOverride ?? ""}
+                            maxLength={18}
+                            placeholder={`Automatic · ${derivedLabel}`}
+                            onFocus={onBeginEdit}
+                            onBlur={onEndEdit}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                onUpdateKey({
+                                    labelOverride: value === "" ? undefined : value,
+                                });
+                            }}
+                        />
+                        {hasLabelOverride && (
+                            <button
+                                type="button"
+                                className="zmk-editor-icon-button"
+                                title="Use the derived label"
+                                aria-label="Clear display label override"
+                                onClick={() => onCommitKey({ labelOverride: undefined })}
+                            >
+                                ↻
+                            </button>
+                        )}
+                    </div>
+                </div>
+
+                <details className="zmk-editor-category-override">
+                    <summary>
+                        <span>Category override</span>
+                        <span>
+                            {hasCategoryOverride
+                                ? CATEGORY_LABELS[selectedKey.categoryOverride!]
+                                : `Automatic · ${CATEGORY_LABELS[effectiveCategory]}`}
+                        </span>
+                    </summary>
+                    <div className="zmk-editor-field zmk-editor-field--secondary">
+                        <select
+                            id="categoryOverride"
+                            aria-label="Category override"
+                            value={selectedKey.categoryOverride ?? ""}
+                            onChange={(event) => {
+                                const value = event.target.value;
+                                onCommitKey({
+                                    categoryOverride: value === ""
+                                        ? undefined
+                                        : value as KeyCategory,
+                                });
+                            }}
+                        >
+                            <option value="">
+                                Automatic — {CATEGORY_LABELS[automaticCategory]}
+                            </option>
+                            {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                                <option key={value} value={value}>{label}</option>
+                            ))}
+                        </select>
+                        <p>
+                            Use this only when the binding semantics do not match the
+                            visual category you want.
+                        </p>
+                    </div>
+                </details>
             </div>
 
             <div className="zmk-editor-inspector__actions">
                 <button
                     type="button"
-                    onClick={() => onCommitKey({
-                        binding: "&trans", label: "_", category: "transparent",
-                    })}
+                    onClick={() => onReplaceKey(createKey("&trans"))}
                 >
                     Transparent
                 </button>
                 <button
                     type="button"
                     className="text-destructive"
-                    onClick={() => onCommitKey({
-                        binding: "&none", label: "×", category: "none",
-                    })}
+                    onClick={() => onReplaceKey(createKey("&none"))}
                 >
                     Disable
                 </button>
@@ -155,17 +212,25 @@ export default function KeyInspector({
                     <details key={group.name} open={index === 0}>
                         <summary>{group.name}</summary>
                         <div className="zmk-editor-quick-bindings__grid">
-                            {group.bindings.map((binding) => (
-                                <button
-                                    key={binding.name}
-                                    type="button"
-                                    title={binding.binding}
-                                    onClick={() => onApplyQuickBinding(binding)}
-                                >
-                                    <strong>{binding.label}</strong>
-                                    <span>{binding.name}</span>
-                                </button>
-                            ))}
+                            {group.bindings.map((binding) => {
+                                const preview = createKey(
+                                    binding.binding,
+                                    binding.label,
+                                    binding.category,
+                                );
+
+                                return (
+                                    <button
+                                        key={binding.name}
+                                        type="button"
+                                        title={binding.binding}
+                                        onClick={() => onApplyQuickBinding(binding)}
+                                    >
+                                        <strong>{getKeyLabel(preview)}</strong>
+                                        <span>{binding.name}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </details>
                 ))}

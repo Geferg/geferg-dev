@@ -2,6 +2,25 @@
     position: relative;
     min-height: 100%;
     overflow: hidden;
+    cursor: default;
+}
+
+.zmk-editor-page button,
+.zmk-editor-page summary,
+.zmk-editor-page select,
+.zmk-editor-page input[type="checkbox"],
+.zmk-editor-page input[type="color"] {
+    cursor: pointer;
+}
+
+.zmk-editor-page input[type="text"],
+.zmk-editor-page input[type="number"],
+.zmk-editor-page textarea {
+    cursor: text;
+}
+
+.zmk-editor-page button:disabled {
+    cursor: default;
 }
 
 .zmk-editor-orbit {
@@ -14,6 +33,7 @@
     border: 1px solid color-mix(in srgb, var(--foreground) 5%, transparent);
     border-radius: 50%;
 }
+
 .zmk-editor-orbit--one { top: 10rem; }
 .zmk-editor-orbit--two { top: 18rem; width: 64rem; height: 24rem; }
 
@@ -31,8 +51,11 @@
     border: 1px solid var(--border);
     background: color-mix(in srgb, var(--card) 86%, transparent);
     color: var(--foreground);
-    transition: border-color 160ms ease, background-color 160ms ease,
-        color 160ms ease, transform 160ms ease;
+    transition:
+        border-color 160ms ease,
+        background-color 160ms ease,
+        color 160ms ease,
+        transform 160ms ease;
 }
 
 .zmk-editor-button {
@@ -50,12 +73,15 @@
     border-color: color-mix(in srgb, var(--primary) 38%, var(--border));
     background: color-mix(in srgb, var(--primary) 7%, var(--card));
 }
-.zmk-editor-button:disabled { cursor: default; opacity: 0.38; }
+
+.zmk-editor-button:disabled { opacity: 0.38; }
+
 .zmk-editor-button--primary {
     border-color: color-mix(in srgb, var(--primary) 60%, transparent);
     background: color-mix(in srgb, var(--primary) 13%, var(--card));
     color: var(--primary);
 }
+
 .zmk-editor-button--ghost { background: transparent; }
 
 .zmk-editor-icon-button {
@@ -67,9 +93,20 @@
     border-radius: 0.65rem;
 }
 
-.zmk-editor-menu { position: relative; }
-.zmk-editor-menu > summary { list-style: none; }
-.zmk-editor-menu > summary::-webkit-details-marker { display: none; }
+.zmk-editor-text-button {
+    font-size: 0.68rem;
+    color: var(--muted-foreground);
+    transition: color 140ms ease;
+}
+
+.zmk-editor-text-button:hover {
+    color: var(--primary);
+}
+
+.zmk-editor-menu {
+    position: relative;
+}
+
 .zmk-editor-menu__panel {
     position: absolute;
     z-index: 30;
@@ -82,6 +119,7 @@
     background: var(--card);
     box-shadow: 0 18px 50px rgb(0 0 0 / 26%);
 }
+
 .zmk-editor-menu__panel button {
     display: block;
     width: 100%;
@@ -90,18 +128,24 @@
     font-size: 0.8rem;
     color: var(--muted-foreground);
 }
+
 .zmk-editor-menu__panel button:hover {
     background: color-mix(in srgb, var(--foreground) 4%, transparent);
     color: var(--foreground);
 }
 
-.zmk-editor-layer-rail {
-    display: flex;
-    gap: 0.25rem;
+.zmk-editor-layer-bar {
     margin-bottom: 0.75rem;
-    overflow-x: auto;
     border-bottom: 1px solid var(--border);
 }
+
+.zmk-editor-layer-rail {
+    display: flex;
+    min-width: 0;
+    gap: 0.25rem;
+    overflow-x: auto;
+}
+
 .zmk-editor-layer-tab {
     --layer-color: var(--primary);
     position: relative;
@@ -114,6 +158,7 @@
     font-size: 0.82rem;
     transition: color 160ms ease, background-color 160ms ease;
 }
+
 .zmk-editor-layer-tab::after {
     position: absolute;
     right: 0.8rem;
@@ -126,14 +171,22 @@
     content: "";
     transition: transform 180ms ease;
 }
+
 .zmk-editor-layer-tab:hover,
-.zmk-editor-layer-tab[data-active="true"] { color: var(--foreground); }
-.zmk-editor-layer-tab[data-active="true"]::after { transform: scaleX(1); }
+.zmk-editor-layer-tab[data-active="true"] {
+    color: var(--foreground);
+}
+
+.zmk-editor-layer-tab[data-active="true"]::after {
+    transform: scaleX(1);
+}
+
 .zmk-editor-layer-tab__index {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 0.66rem;
     color: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
 }
+
 .zmk-editor-layer-tab__dot {
     width: 0.45rem;
     height: 0.45rem;
@@ -149,7 +202,6 @@
 }
 
 .zmk-editor-inspector,
-.zmk-editor-coverage,
 .zmk-editor-config-card {
     border: 1px solid var(--border);
     background: color-mix(in srgb, var(--card) 84%, transparent);
@@ -161,6 +213,7 @@
     border-radius: 1rem;
     padding: 1rem;
 }
+
 .zmk-editor-inspector__head,
 .zmk-editor-inspector__subhead {
     display: flex;
@@ -168,17 +221,56 @@
     justify-content: space-between;
     gap: 1rem;
 }
-.zmk-editor-inspector__head h2 { margin: 0; font-size: 1.15rem; font-weight: 600; }
-.zmk-editor-inspector__subhead h3 { font-size: 0.88rem; font-weight: 600; }
-.zmk-editor-inspector__subhead span { font-size: 0.68rem; color: var(--muted-foreground); }
 
-.zmk-editor-field { margin-top: 0.85rem; }
+.zmk-editor-inspector__head h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.zmk-editor-inspector__identity {
+    display: grid;
+    justify-items: end;
+    gap: 0.35rem;
+}
+
+.zmk-editor-category-badge {
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 0.2rem 0.45rem;
+    font-size: 0.62rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-inspector__subhead h3 {
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.zmk-editor-inspector__subhead span {
+    font-size: 0.68rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-field {
+    margin-top: 0.85rem;
+}
+
 .zmk-editor-field label {
-    display: block;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
     margin-bottom: 0.35rem;
     font-size: 0.72rem;
     color: var(--muted-foreground);
 }
+
+.zmk-editor-field label span {
+    font-size: 0.62rem;
+    color: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
+}
+
 .zmk-editor-field input,
 .zmk-editor-field select {
     width: 100%;
@@ -190,20 +282,74 @@
     color: var(--foreground);
     outline: none;
 }
+
+.zmk-editor-field--primary input {
+    border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
+    background: color-mix(in srgb, var(--background) 78%, transparent);
+}
+
+.zmk-editor-field--secondary input,
+.zmk-editor-field--secondary select {
+    border-color: color-mix(in srgb, var(--border) 78%, transparent);
+    background: color-mix(in srgb, var(--background) 48%, transparent);
+    color: color-mix(in srgb, var(--foreground) 82%, transparent);
+}
+
 .zmk-editor-field input:focus,
 .zmk-editor-field select:focus {
     border-color: color-mix(in srgb, var(--primary) 65%, transparent);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 10%, transparent);
 }
+
 .zmk-editor-field p {
     margin-top: 0.35rem;
     font-size: 0.66rem;
     line-height: 1.45;
     color: var(--muted-foreground);
 }
-.zmk-editor-input-row { display: flex; gap: 0.45rem; }
 
-.zmk-editor-inspector__actions { display: flex; gap: 0.45rem; margin-top: 0.85rem; }
+.zmk-editor-input-row {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.zmk-editor-override-panel {
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+    padding-top: 0.9rem;
+}
+
+.zmk-editor-category-override {
+    margin-top: 0.55rem;
+}
+
+.zmk-editor-category-override > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    list-style: none;
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.1rem;
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-category-override > summary::-webkit-details-marker {
+    display: none;
+}
+
+.zmk-editor-category-override > summary span:last-child {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.62rem;
+}
+
+.zmk-editor-inspector__actions {
+    display: flex;
+    gap: 0.45rem;
+    margin-top: 0.85rem;
+}
+
 .zmk-editor-inspector__actions button {
     flex: 1;
     border: 1px solid var(--border);
@@ -212,29 +358,42 @@
     font-size: 0.72rem;
     color: var(--muted-foreground);
 }
+
 .zmk-editor-inspector__actions button:hover {
     border-color: color-mix(in srgb, var(--foreground) 18%, var(--border));
     color: var(--foreground);
 }
 
-.zmk-editor-section-divider { height: 1px; margin: 1rem 0; background: var(--border); }
-.zmk-editor-quick-bindings details + details { margin-top: 0.2rem; }
+.zmk-editor-section-divider {
+    height: 1px;
+    margin: 1rem 0;
+    background: var(--border);
+}
+
+.zmk-editor-quick-bindings details + details {
+    margin-top: 0.2rem;
+}
+
 .zmk-editor-quick-bindings summary,
 .zmk-editor-layer-settings summary {
-    cursor: pointer;
     list-style: none;
     padding: 0.45rem 0;
     font-size: 0.75rem;
     color: var(--muted-foreground);
 }
+
 .zmk-editor-quick-bindings summary::-webkit-details-marker,
-.zmk-editor-layer-settings summary::-webkit-details-marker { display: none; }
+.zmk-editor-layer-settings summary::-webkit-details-marker {
+    display: none;
+}
+
 .zmk-editor-quick-bindings__grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.4rem;
     padding: 0.3rem 0 0.65rem;
 }
+
 .zmk-editor-quick-bindings__grid button {
     display: flex;
     min-height: 3.15rem;
@@ -246,65 +405,27 @@
     text-align: left;
     transition: border-color 140ms ease, background-color 140ms ease;
 }
+
 .zmk-editor-quick-bindings__grid button:hover {
     border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
     background: color-mix(in srgb, var(--primary) 5%, transparent);
 }
+
 .zmk-editor-quick-bindings__grid strong {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     font-size: 0.72rem;
     color: var(--foreground);
 }
+
 .zmk-editor-quick-bindings__grid span {
     margin-top: 0.15rem;
     font-size: 0.62rem;
     color: var(--muted-foreground);
 }
-.zmk-editor-color-input { width: 3.2rem !important; padding: 0.2rem !important; }
 
-.zmk-editor-coverage {
-    margin-top: 0.75rem;
-    overflow: hidden;
-    border-radius: 0.9rem;
-}
-.zmk-editor-coverage__summary {
-    display: flex;
-    width: 100%;
-    align-items: center;
-    justify-content: space-between;
-    gap: 1rem;
-    padding: 0.9rem 1rem;
-    text-align: left;
-}
-.zmk-editor-coverage__summary strong,
-.zmk-editor-coverage__summary small { display: block; }
-.zmk-editor-coverage__summary strong { font-size: 0.82rem; font-weight: 600; }
-.zmk-editor-coverage__summary small {
-    margin-top: 0.15rem;
-    font-size: 0.68rem;
-    color: var(--muted-foreground);
-}
-.zmk-editor-coverage__grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(2rem, 1fr));
-    gap: 0.35rem;
-    border-top: 1px solid var(--border);
-    padding: 0.8rem 1rem 1rem;
-}
-.zmk-editor-coverage__grid span {
-    display: grid;
-    min-height: 2rem;
-    place-items: center;
-    border: 1px solid var(--border);
-    border-radius: 0.45rem;
-    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 0.72rem;
-    color: var(--muted-foreground);
-}
-.zmk-editor-coverage__grid span[data-present="true"] {
-    border-color: color-mix(in srgb, #62d394 48%, transparent);
-    background: color-mix(in srgb, #62d394 6%, transparent);
-    color: #62d394;
+.zmk-editor-color-input {
+    width: 3.2rem !important;
+    padding: 0.2rem !important;
 }
 
 .zmk-editor-config-grid {
@@ -312,6 +433,7 @@
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 0.75rem;
 }
+
 .zmk-editor-config-card {
     display: flex;
     min-height: 6.6rem;
@@ -321,20 +443,29 @@
     border-radius: 0.9rem;
     padding: 1rem;
 }
+
 .zmk-editor-config-card strong,
-.zmk-editor-config-card small { display: block; }
-.zmk-editor-config-card strong { font-size: 0.82rem; }
+.zmk-editor-config-card small {
+    display: block;
+}
+
+.zmk-editor-config-card strong {
+    font-size: 0.82rem;
+}
+
 .zmk-editor-config-card small {
     margin-top: 0.25rem;
     font-size: 0.68rem;
     line-height: 1.45;
     color: var(--muted-foreground);
 }
+
 .zmk-editor-config-card input[type="checkbox"] {
     width: 1rem;
     height: 1rem;
     accent-color: var(--primary);
 }
+
 .zmk-editor-number-input {
     width: 4.3rem;
     border: 1px solid var(--border);
@@ -345,16 +476,26 @@
 }
 
 .zmk-editor-dialog {
+    position: fixed;
+    inset: 0;
     width: min(64rem, calc(100vw - 2rem));
+    max-width: none;
     max-height: 88vh;
+    margin: auto;
     overflow: hidden;
+    padding: 0;
     border: 1px solid var(--border);
     border-radius: 1rem;
     background: var(--card);
     color: var(--foreground);
     box-shadow: 0 30px 100px rgb(0 0 0 / 55%);
 }
-.zmk-editor-dialog::backdrop { background: rgb(0 0 0 / 64%); backdrop-filter: blur(4px); }
+
+.zmk-editor-dialog::backdrop {
+    background: rgb(0 0 0 / 64%);
+    backdrop-filter: blur(4px);
+}
+
 .zmk-editor-dialog__head,
 .zmk-editor-dialog__foot {
     display: flex;
@@ -363,9 +504,21 @@
     gap: 1rem;
     padding: 1rem;
 }
-.zmk-editor-dialog__head { border-bottom: 1px solid var(--border); }
-.zmk-editor-dialog__head h2 { font-size: 1rem; font-weight: 600; }
-.zmk-editor-dialog__head span { font-size: 0.7rem; color: var(--muted-foreground); }
+
+.zmk-editor-dialog__head {
+    border-bottom: 1px solid var(--border);
+}
+
+.zmk-editor-dialog__head h2 {
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.zmk-editor-dialog__head span {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+}
+
 .zmk-editor-dialog__code {
     display: block;
     width: 100%;
@@ -380,27 +533,52 @@
     line-height: 1.55;
     outline: none;
 }
-.zmk-editor-dialog__foot { border-top: 1px solid var(--border); }
-.zmk-editor-validation { display: grid; gap: 0.2rem; font-size: 0.66rem; color: var(--muted-foreground); }
+
+.zmk-editor-dialog__foot {
+    border-top: 1px solid var(--border);
+}
+
+.zmk-editor-validation {
+    display: grid;
+    gap: 0.2rem;
+    font-size: 0.66rem;
+    color: var(--muted-foreground);
+}
 
 @media (max-width: 1120px) {
-    .zmk-editor-shell { grid-template-columns: 1fr; }
+    .zmk-editor-shell {
+        grid-template-columns: 1fr;
+    }
+
     .zmk-editor-inspector {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 0 1rem;
     }
+
     .zmk-editor-inspector__head,
+    .zmk-editor-override-panel,
+    .zmk-editor-inspector__actions,
     .zmk-editor-section-divider,
     .zmk-editor-quick-bindings,
-    .zmk-editor-layer-settings { grid-column: 1 / -1; }
+    .zmk-editor-layer-settings {
+        grid-column: 1 / -1;
+    }
 }
 
 @media (max-width: 760px) {
-    .zmk-editor-orbit { display: none; }
-    .zmk-editor-coverage__summary,
+    .zmk-editor-orbit {
+        display: none;
+    }
+
     .zmk-editor-dialog__head,
-    .zmk-editor-dialog__foot { align-items: flex-start; flex-direction: column; }
+    .zmk-editor-dialog__foot {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
     .zmk-editor-inspector,
-    .zmk-editor-config-grid { grid-template-columns: 1fr; }
+    .zmk-editor-config-grid {
+        grid-template-columns: 1fr;
+    }
 }
