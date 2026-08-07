@@ -8,11 +8,11 @@ import type {
 } from "./zmkEditor.types";
 
 import {
-    COVERAGE_CHARACTERS,
     createDefaultState,
     createKey,
     deriveLabel,
     findModMorphForBinding,
+    getCoverage,
     getKeyCategory,
     getKeyLabel,
     getModMorphBinding,
@@ -64,7 +64,10 @@ export default function ZmkEditorPage() {
     const currentLayer = state.layers[state.currentLayer];
     const selectedKey = currentLayer.keys[state.selectedKey];
     const exportText = useMemo(() => generateKeymap(state), [state]);
-    const coveredCharacters = useMemo(() => getCoverage(state), [state.layers]);
+    const coveredCharacters = useMemo(
+        () => getCoverage(state),
+        [state.layers, state.modMorphs],
+    );
 
     useEffect(() => {
         setSaveStatus("Saving locally…");
@@ -501,20 +504,6 @@ function cloneState(state: ZmkEditorState): ZmkEditorState {
     return structuredClone(state);
 }
 
-function getCoverage(state: ZmkEditorState): Set<string> {
-    const labels = state.layers.flatMap((layer) =>
-        layer.keys.map(getKeyLabel),
-    );
-
-    return new Set(COVERAGE_CHARACTERS.filter((character) => {
-        const variants = [
-            character,
-            character.toUpperCase(),
-            character.toLowerCase(),
-        ];
-        return labels.some((label) => variants.includes(label));
-    }));
-}
 function uniqueModMorphId(state: ZmkEditorState): string {
     const used = new Set(state.modMorphs.map((behavior) => behavior.id));
     let index = 1;

@@ -151,6 +151,55 @@ export function getKeyCategory(key: ZmkKey): KeyCategory {
     return key.categoryOverride ?? inferCategory(key.binding, getKeyLabel(key));
 }
 
+/**
+ * Characters reachable from the physical keymap. Managed mod-morph bindings
+ * contribute both branches, including recursively referenced mod-morphs.
+ */
+export function getCoverage(state: ZmkEditorState): Set<string> {
+    const labels = state.layers.flatMap((layer) =>
+        layer.keys.flatMap((key) => [
+            // Preserve explicit presentation overrides as coverage hints.
+            getKeyLabel(key),
+            ...resolveCoverageLabels(state, key.binding),
+        ]),
+    );
+
+    return new Set(COVERAGE_CHARACTERS.filter((character) => {
+        const variants = [
+            character,
+            character.toUpperCase(),
+            character.toLowerCase(),
+        ];
+        return labels.some((label) => variants.includes(label));
+    }));
+}
+
+function resolveCoverageLabels(
+    state: ZmkEditorState,
+    binding: string,
+    visited = new Set<string>(),
+): string[] {
+    const behavior = findModMorphForBinding(state, binding);
+
+    if (!behavior) {
+        return [deriveLabel(binding)];
+    }
+
+    // A cycle can exist temporarily while editing nested managed behaviors.
+    // Coverage should degrade safely rather than recurse forever.
+    if (visited.has(behavior.id)) {
+        return [];
+    }
+
+    const nextVisited = new Set(visited);
+    nextVisited.add(behavior.id);
+
+    return [
+        ...resolveCoverageLabels(state, behavior.normalBinding, nextVisited),
+        ...resolveCoverageLabels(state, behavior.morphedBinding, nextVisited),
+    ];
+}
+
 function transparentLayer(): ZmkKey[] {
     return Array.from({ length: KEY_COUNT }, () => createKey("&trans"));
 }
