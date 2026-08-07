@@ -21,6 +21,7 @@ export default function KeyInspector({
     state,
     selectedKey,
     bindingInputRef,
+    displayLabelInputRef,
     onBeginEdit,
     onEndEdit,
     onUpdateKey,
@@ -32,6 +33,7 @@ export default function KeyInspector({
     state: ZmkEditorState;
     selectedKey: ZmkKey;
     bindingInputRef: RefObject<HTMLInputElement | null>;
+    displayLabelInputRef: RefObject<HTMLInputElement | null>;
     onBeginEdit: () => void;
     onEndEdit: () => void;
     onUpdateKey: (patch: Partial<ZmkKey>) => void;
@@ -123,6 +125,7 @@ export default function KeyInspector({
                     </label>
                     <div className="zmk-editor-input-row">
                         <input
+                            ref={displayLabelInputRef}
                             id="displayLabel"
                             type="text"
                             value={selectedKey.labelOverride ?? ""}

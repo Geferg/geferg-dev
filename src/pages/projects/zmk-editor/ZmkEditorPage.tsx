@@ -8,13 +8,18 @@ import type {
 
 import {
     COVERAGE_CHARACTERS,
-    STORAGE_KEY,
     createDefaultState,
     createKey,
     getKeyLabel,
-    normalizeState,
 } from "./logic/zmkEditor.data";
 import { generateKeymap } from "./logic/zmkEditor.keymap";
+import {
+    cloneKey,
+    loadEditorState,
+    readKeyRegister,
+    writeSelectedKeyToRegister,
+    zmkEditorStateStore,
+} from "./logic/zmkEditor.storage";
 
 import KeyboardWorkspace from "./components/KeyboardWorkspace";
 import KeyInspector from "./components/KeyInspector";
@@ -29,19 +34,25 @@ import { useZmkEditorVimMotions } from "./useZmkEditorVimMotions";
 
 import "./zmkEditor.css";
 
+// Replace this constant with persisted page preferences when the visible toggle
+// is introduced. The motion hook already accepts the final enabled shape.
 const VIM_MOTIONS_ENABLED = true;
 
 export default function ZmkEditorPage() {
-    const [state, setState] = useState<ZmkEditorState>(() => loadState());
+    const [state, setState] = useState<ZmkEditorState>(() => loadEditorState());
     const [history, setHistory] = useState<ZmkEditorState[]>([]);
     const [future, setFuture] = useState<ZmkEditorState[]>([]);
     const [saveStatus, setSaveStatus] = useState("Autosaves locally");
+    const [commandStatus, setCommandStatus] = useState<string | null>(null);
     const [coverageExpanded, setCoverageExpanded] = useState(false);
 
     const editSnapshotRef = useRef<ZmkEditorState | null>(null);
     const saveTimeoutRef = useRef<number | null>(null);
+    const commandStatusTimeoutRef = useRef<number | null>(null);
     const exportDialogRef = useRef<HTMLDialogElement>(null);
+    const editorRootRef = useRef<HTMLElement>(null);
     const bindingInputRef = useRef<HTMLInputElement>(null);
+    const displayLabelInputRef = useRef<HTMLInputElement>(null);
 
     const currentLayer = state.layers[state.currentLayer];
     const selectedKey = currentLayer.keys[state.selectedKey];
@@ -56,9 +67,9 @@ export default function ZmkEditorPage() {
         }
 
         saveTimeoutRef.current = window.setTimeout(() => {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            const result = zmkEditorStateStore.write(state);
             saveTimeoutRef.current = null;
-            setSaveStatus("Saved locally");
+            setSaveStatus(result.ok ? "Saved locally" : "Local save unavailable");
         }, 180);
 
         return () => {
@@ -68,6 +79,25 @@ export default function ZmkEditorPage() {
             }
         };
     }, [state]);
+
+    useEffect(() => () => {
+        if (commandStatusTimeoutRef.current !== null) {
+            window.clearTimeout(commandStatusTimeoutRef.current);
+        }
+    }, []);
+
+    function showCommandStatus(message: string): void {
+        setCommandStatus(message);
+
+        if (commandStatusTimeoutRef.current !== null) {
+            window.clearTimeout(commandStatusTimeoutRef.current);
+        }
+
+        commandStatusTimeoutRef.current = window.setTimeout(() => {
+            commandStatusTimeoutRef.current = null;
+            setCommandStatus(null);
+        }, 1300);
+    }
 
     function commit(mutator: (draft: ZmkEditorState) => void) {
         setState((previous) => {
@@ -135,7 +165,7 @@ export default function ZmkEditorPage() {
 
     function replaceSelectedKey(key: ZmkKey) {
         commit((draft) => {
-            draft.layers[draft.currentLayer].keys[draft.selectedKey] = key;
+            draft.layers[draft.currentLayer].keys[draft.selectedKey] = cloneKey(key);
         });
     }
 
@@ -181,8 +211,8 @@ export default function ZmkEditorPage() {
             saveTimeoutRef.current = null;
         }
 
-        localStorage.removeItem(STORAGE_KEY);
-        setSaveStatus("Local save cleared");
+        const result = zmkEditorStateStore.remove();
+        setSaveStatus(result.ok ? "Local save cleared" : "Could not clear local save");
     }
 
     const selectKey = useCallback((index: number) => {
@@ -199,24 +229,82 @@ export default function ZmkEditorPage() {
         }));
     }, []);
 
+    function startReplaceBinding() {
+        beginEdit();
+        updateSelectedKey({ binding: "&" });
+    }
+
+    function yankSelectedKey() {
+        const result = writeSelectedKeyToRegister(state, "yank");
+
+        if (!result.ok) {
+            showCommandStatus("Could not update key register");
+            return;
+        }
+
+        showCommandStatus(`Yanked ${getKeyLabel(result.value.key)}`);
+    }
+
+    function deleteSelectedKey() {
+        const result = writeSelectedKeyToRegister(state, "delete");
+
+        if (!result.ok) {
+            showCommandStatus("Register unavailable · key unchanged");
+            return;
+        }
+
+        const deletedLabel = getKeyLabel(result.value.key);
+        replaceSelectedKey(createKey("&trans"));
+        showCommandStatus(`Deleted ${deletedLabel} · register updated`);
+    }
+
+    function pasteSelectedKey() {
+        const result = readKeyRegister();
+
+        if (!result.ok) {
+            showCommandStatus("Stored register is invalid or unavailable");
+            return;
+        }
+
+        if (!result.value) {
+            showCommandStatus("Key register is empty");
+            return;
+        }
+
+        replaceSelectedKey(result.value.key);
+        showCommandStatus(
+            `Pasted ${getKeyLabel(result.value.key)} from ${result.value.source.layerName}`,
+        );
+    }
+
     useZmkEditorVimMotions({
         enabled: VIM_MOTIONS_ENABLED,
         selectedKey: state.selectedKey,
         currentLayer: state.currentLayer,
         layerCount: state.layers.length,
+        editorRootRef,
         bindingInputRef,
+        displayLabelInputRef,
         onSelectKey: selectKey,
         onSelectLayer: selectLayer,
+        onStartReplaceBinding: startReplaceBinding,
+        onYankKey: yankSelectedKey,
+        onDeleteKey: deleteSelectedKey,
+        onPasteKey: pasteSelectedKey,
     });
 
     return (
-        <section className="zmk-editor-page bg-background text-foreground">
+        <section
+            ref={editorRootRef}
+            tabIndex={-1}
+            className="zmk-editor-page bg-background text-foreground"
+        >
             <div className="zmk-editor-orbit zmk-editor-orbit--one" />
             <div className="zmk-editor-orbit zmk-editor-orbit--two" />
 
             <div className="relative mx-auto w-full max-w-[1440px] px-5 py-10 sm:px-8 lg:px-10 lg:py-14">
                 <EditorHeader
-                    saveStatus={saveStatus}
+                    saveStatus={commandStatus ?? saveStatus}
                     canUndo={history.length > 0}
                     canRedo={future.length > 0}
                     onUndo={undo}
@@ -243,6 +331,7 @@ export default function ZmkEditorPage() {
                         state={state}
                         selectedKey={selectedKey}
                         bindingInputRef={bindingInputRef}
+                        displayLabelInputRef={displayLabelInputRef}
                         onBeginEdit={beginEdit}
                         onEndEdit={endEdit}
                         onUpdateKey={(patch) => updateSelectedKey(patch)}
@@ -267,17 +356,6 @@ export default function ZmkEditorPage() {
             />
         </section>
     );
-}
-
-function loadState(): ZmkEditorState {
-    try {
-        const saved = localStorage.getItem(STORAGE_KEY);
-        return saved
-            ? normalizeState(JSON.parse(saved))
-            : createDefaultState();
-    } catch {
-        return createDefaultState();
-    }
 }
 
 function cloneState(state: ZmkEditorState): ZmkEditorState {

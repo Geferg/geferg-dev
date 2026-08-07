@@ -1,6 +1,6 @@
 import { useEffect, type RefObject } from "react";
 
-import { getKeyPosition } from "./logic/zmkEditor.data";
+import { getKeyPosition, KEY_COUNT } from "./logic/zmkEditor.data";
 
 const KEY_ROWS = [
     Array.from({ length: 12 }, (_, index) => index),
@@ -14,9 +14,15 @@ type UseZmkEditorVimMotionsOptions = {
     selectedKey: number;
     currentLayer: number;
     layerCount: number;
+    editorRootRef: RefObject<HTMLElement | null>;
     bindingInputRef: RefObject<HTMLInputElement | null>;
+    displayLabelInputRef: RefObject<HTMLInputElement | null>;
     onSelectKey: (index: number) => void;
     onSelectLayer: (index: number) => void;
+    onStartReplaceBinding: () => void;
+    onYankKey: () => void;
+    onDeleteKey: () => void;
+    onPasteKey: () => void;
 };
 
 export function useZmkEditorVimMotions({
@@ -24,40 +30,87 @@ export function useZmkEditorVimMotions({
     selectedKey,
     currentLayer,
     layerCount,
+    editorRootRef,
     bindingInputRef,
+    displayLabelInputRef,
     onSelectKey,
     onSelectLayer,
+    onStartReplaceBinding,
+    onYankKey,
+    onDeleteKey,
+    onPasteKey,
 }: UseZmkEditorVimMotionsOptions): void {
     useEffect(() => {
         if (!enabled) {
             return;
         }
 
-        function handleKeyDown(event: KeyboardEvent) {
-            if (event.defaultPrevented || event.altKey || event.metaKey) {
+        function focusBinding(selectContents: boolean): void {
+            const input = bindingInputRef.current;
+
+            if (!input) {
                 return;
             }
 
-            if (isEditableTarget(event.target)) {
+            input.focus();
+
+            if (selectContents) {
+                input.select();
+            }
+        }
+
+        function focusDisplayOverride(): void {
+            const input = displayLabelInputRef.current;
+
+            if (!input) {
                 return;
             }
 
-            if (event.ctrlKey) {
-                if (event.key.toLowerCase() === "n") {
+            input.focus();
+            input.select();
+        }
+
+        function handleKeyDown(event: KeyboardEvent): void {
+            if (event.defaultPrevented || event.altKey || event.metaKey || event.ctrlKey) {
+                return;
+            }
+
+            const editableTarget = getEditableTarget(event.target);
+
+            if (editableTarget) {
+                if (!editorRootRef.current?.contains(editableTarget)) {
+                    return;
+                }
+
+                if (event.key === "Escape") {
                     event.preventDefault();
-                    onSelectLayer(wrapIndex(currentLayer + 1, layerCount));
-                } else if (event.key.toLowerCase() === "p") {
+                    editableTarget.blur();
+                    editorRootRef.current?.focus({ preventScroll: true });
+                    return;
+                }
+
+                if (
+                    event.key === "Enter" &&
+                    editableTarget === bindingInputRef.current
+                ) {
                     event.preventDefault();
-                    onSelectLayer(wrapIndex(currentLayer - 1, layerCount));
+
+                    // Blurring commits the current edit. Refocusing after the key
+                    // selection changes starts a fresh edit snapshot for the next key.
+                    editableTarget.blur();
+                    onSelectKey(wrapIndex(selectedKey + 1, KEY_COUNT));
+
+                    window.requestAnimationFrame(() => {
+                        focusBinding(true);
+                    });
                 }
 
                 return;
             }
 
-            const key = event.key;
             let nextKey: number | null = null;
 
-            switch (key) {
+            switch (event.key) {
                 case "h":
                 case "ArrowLeft":
                     nextKey = moveWithinRow(selectedKey, -1);
@@ -89,18 +142,50 @@ export function useZmkEditorVimMotions({
                     break;
                 }
 
-                case "u":
-                    nextKey = findNearestKey(selectedKey, KEY_ROWS[0]);
-                    break;
+                case "n":
+                    event.preventDefault();
+                    onSelectLayer(wrapIndex(currentLayer + 1, layerCount));
+                    return;
 
-                case "d":
-                    nextKey = findNearestKey(selectedKey, KEY_ROWS[3]);
-                    break;
+                case "N":
+                    event.preventDefault();
+                    onSelectLayer(wrapIndex(currentLayer - 1, layerCount));
+                    return;
 
                 case "i":
                     event.preventDefault();
-                    bindingInputRef.current?.focus();
-                    bindingInputRef.current?.select();
+                    focusBinding(true);
+                    return;
+
+                case "a":
+                    event.preventDefault();
+                    focusDisplayOverride();
+                    return;
+
+                case "r":
+                    event.preventDefault();
+                    onStartReplaceBinding();
+                    window.requestAnimationFrame(() => {
+                        const input = bindingInputRef.current;
+                        input?.focus();
+                        input?.setSelectionRange(1, 1);
+                    });
+                    return;
+
+                case "y":
+                    event.preventDefault();
+                    onYankKey();
+                    return;
+
+                case "x":
+                case "d":
+                    event.preventDefault();
+                    onDeleteKey();
+                    return;
+
+                case "p":
+                    event.preventDefault();
+                    onPasteKey();
                     return;
 
                 default:
@@ -119,10 +204,16 @@ export function useZmkEditorVimMotions({
     }, [
         bindingInputRef,
         currentLayer,
+        displayLabelInputRef,
+        editorRootRef,
         enabled,
         layerCount,
+        onDeleteKey,
+        onPasteKey,
         onSelectKey,
         onSelectLayer,
+        onStartReplaceBinding,
+        onYankKey,
         selectedKey,
     ]);
 }
@@ -187,15 +278,19 @@ function wrapIndex(index: number, length: number): number {
     return ((index % length) + length) % length;
 }
 
-function isEditableTarget(target: EventTarget | null): boolean {
+function getEditableTarget(target: EventTarget | null): HTMLElement | null {
     if (!(target instanceof HTMLElement)) {
-        return false;
+        return null;
     }
 
-    return (
+    if (
         target.isContentEditable ||
         target instanceof HTMLInputElement ||
         target instanceof HTMLTextAreaElement ||
         target instanceof HTMLSelectElement
-    );
+    ) {
+        return target;
+    }
+
+    return null;
 }
