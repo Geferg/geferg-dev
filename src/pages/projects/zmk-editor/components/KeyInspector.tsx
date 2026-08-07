@@ -1,3 +1,5 @@
+import type { RefObject } from "react";
+
 import type {
     KeyCategory,
     QuickBinding,
@@ -18,6 +20,7 @@ import {
 export default function KeyInspector({
     state,
     selectedKey,
+    bindingInputRef,
     onBeginEdit,
     onEndEdit,
     onUpdateKey,
@@ -28,6 +31,7 @@ export default function KeyInspector({
 }: {
     state: ZmkEditorState;
     selectedKey: ZmkKey;
+    bindingInputRef: RefObject<HTMLInputElement | null>;
     onBeginEdit: () => void;
     onEndEdit: () => void;
     onUpdateKey: (patch: Partial<ZmkKey>) => void;
@@ -75,6 +79,7 @@ export default function KeyInspector({
             <div className="zmk-editor-field zmk-editor-field--primary">
                 <label htmlFor="binding">ZMK binding</label>
                 <input
+                    ref={bindingInputRef}
                     id="binding"
                     className="font-mono"
                     type="text"

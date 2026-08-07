@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import type {
     QuickBinding,
@@ -25,7 +25,11 @@ import {
     ProjectConfiguration,
 } from "./components/EditorChrome";
 
+import { useZmkEditorVimMotions } from "./useZmkEditorVimMotions";
+
 import "./zmkEditor.css";
+
+const VIM_MOTIONS_ENABLED = true;
 
 export default function ZmkEditorPage() {
     const [state, setState] = useState<ZmkEditorState>(() => loadState());
@@ -37,6 +41,7 @@ export default function ZmkEditorPage() {
     const editSnapshotRef = useRef<ZmkEditorState | null>(null);
     const saveTimeoutRef = useRef<number | null>(null);
     const exportDialogRef = useRef<HTMLDialogElement>(null);
+    const bindingInputRef = useRef<HTMLInputElement>(null);
 
     const currentLayer = state.layers[state.currentLayer];
     const selectedKey = currentLayer.keys[state.selectedKey];
@@ -180,6 +185,30 @@ export default function ZmkEditorPage() {
         setSaveStatus("Local save cleared");
     }
 
+    const selectKey = useCallback((index: number) => {
+        setState((previous) => ({
+            ...previous,
+            selectedKey: index,
+        }));
+    }, []);
+
+    const selectLayer = useCallback((index: number) => {
+        setState((previous) => ({
+            ...previous,
+            currentLayer: index,
+        }));
+    }, []);
+
+    useZmkEditorVimMotions({
+        enabled: VIM_MOTIONS_ENABLED,
+        selectedKey: state.selectedKey,
+        currentLayer: state.currentLayer,
+        layerCount: state.layers.length,
+        bindingInputRef,
+        onSelectKey: selectKey,
+        onSelectLayer: selectLayer,
+    });
+
     return (
         <section className="zmk-editor-page bg-background text-foreground">
             <div className="zmk-editor-orbit zmk-editor-orbit--one" />
@@ -199,10 +228,7 @@ export default function ZmkEditorPage() {
 
                 <LayerRail
                     state={state}
-                    onSelect={(index) => setState((previous) => ({
-                        ...previous,
-                        currentLayer: index,
-                    }))}
+                    onSelect={selectLayer}
                 />
 
                 <div className="zmk-editor-shell">
@@ -210,15 +236,13 @@ export default function ZmkEditorPage() {
                         state={state}
                         coveredCharacters={coveredCharacters}
                         coverageExpanded={coverageExpanded}
-                        onSelectKey={(index) => setState((previous) => ({
-                            ...previous,
-                            selectedKey: index,
-                        }))}
+                        onSelectKey={selectKey}
                         onToggleCoverage={() => setCoverageExpanded((value) => !value)}
                     />
                     <KeyInspector
                         state={state}
                         selectedKey={selectedKey}
+                        bindingInputRef={bindingInputRef}
                         onBeginEdit={beginEdit}
                         onEndEdit={endEdit}
                         onUpdateKey={(patch) => updateSelectedKey(patch)}
