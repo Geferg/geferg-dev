@@ -23,6 +23,8 @@ type UseZmkEditorVimMotionsOptions = {
     onYankKey: () => void;
     onDeleteKey: () => void;
     onPasteKey: () => void;
+    onUndo: () => void;
+    onRedo: () => void;
 };
 
 export function useZmkEditorVimMotions({
@@ -39,6 +41,8 @@ export function useZmkEditorVimMotions({
     onYankKey,
     onDeleteKey,
     onPasteKey,
+    onUndo,
+    onRedo,
 }: UseZmkEditorVimMotionsOptions): void {
     useEffect(() => {
         if (!enabled) {
@@ -188,6 +192,16 @@ export function useZmkEditorVimMotions({
                     onPasteKey();
                     return;
 
+                case "u":
+                    event.preventDefault();
+                    onUndo();
+                    return;
+
+                case "U":
+                    event.preventDefault();
+                    onRedo();
+                    return;
+
                 default:
                     return;
             }
@@ -210,9 +224,11 @@ export function useZmkEditorVimMotions({
         layerCount,
         onDeleteKey,
         onPasteKey,
+        onRedo,
         onSelectKey,
         onSelectLayer,
         onStartReplaceBinding,
+        onUndo,
         onYankKey,
         selectedKey,
     ]);

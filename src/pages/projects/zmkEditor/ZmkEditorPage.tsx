@@ -429,6 +429,8 @@ export default function ZmkEditorPage() {
         onYankKey: yankSelectedKey,
         onDeleteKey: deleteSelectedKey,
         onPasteKey: pasteSelectedKey,
+        onUndo: undo,
+        onRedo: redo,
     });
 
     return (
