@@ -6,7 +6,6 @@ import type {
     ZmkKey,
 } from "../zmkEditor.types";
 
-export const STORAGE_KEY = "geferg-zmk-layout-editor-v2";
 export const KEY_COUNT = 42;
 
 export const CATEGORY_LABELS: Record<KeyCategory, string> = {
