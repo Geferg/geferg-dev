@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import type {
     ZmkEditorState,
     ZmkKey,
@@ -125,6 +126,16 @@ function ManagedModMorph({
         record?: boolean,
     ) => void;
 }) {
+    const [referenceDraft, setReferenceDraft] = useState(behavior.reference);
+
+    useEffect(() => {
+        setReferenceDraft(behavior.reference);
+    }, [behavior.id, behavior.reference]);
+
+    function commitReference() {
+        onUpdate(behavior.id, { reference: referenceDraft }, true);
+    }
+
     function setModifier(
         modifier: ZmkModifier,
         checked: boolean,
@@ -156,12 +167,9 @@ function ManagedModMorph({
                         id={`modMorphReference-${behavior.id}`}
                         className="font-mono"
                         type="text"
-                        value={behavior.reference}
-                        onFocus={onBeginEdit}
-                        onBlur={onEndEdit}
-                        onChange={(event) => onUpdate(behavior.id, {
-                            reference: event.target.value,
-                        })}
+                        value={referenceDraft}
+                        onChange={(event) => setReferenceDraft(event.target.value)}
+                        onBlur={commitReference}
                     />
                 </div>
             </div>
