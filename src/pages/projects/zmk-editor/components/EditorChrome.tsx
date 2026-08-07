@@ -306,7 +306,7 @@ export function ExportDialog({
                     <p className="zmk-editor-kicker">EXPORT</p>
                     <h2>Generated ZMK keymap</h2>
                     <span>
-                        {state.layers.length} layers · {KEY_COUNT} keys · {state.triLayer
+                        {state.layers.length} layers · {KEY_COUNT} keys · {state.modMorphs.length} mod-morph{state.modMorphs.length === 1 ? "" : "s"} · {state.triLayer
                             ? "conditional layer enabled"
                             : "direct layers"}
                     </span>
@@ -332,6 +332,9 @@ export function ExportDialog({
                 <div className="zmk-editor-validation">
                     <span>✓ 42 bindings per layer</span>
                     <span>✓ Layer constants sanitized</span>
+                    {state.modMorphs.length > 0 && (
+                        <span>✓ Managed mod-morph definitions emitted</span>
+                    )}
                     <span>! Review locale-specific keycodes before flashing</span>
                 </div>
                 <div className="flex flex-wrap gap-2">

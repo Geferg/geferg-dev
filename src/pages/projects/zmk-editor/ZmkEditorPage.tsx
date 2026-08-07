@@ -4,13 +4,20 @@ import type {
     QuickBinding,
     ZmkEditorState,
     ZmkKey,
+    ZmkModMorph,
 } from "./zmkEditor.types";
 
 import {
     COVERAGE_CHARACTERS,
     createDefaultState,
     createKey,
+    deriveLabel,
+    findModMorphForBinding,
+    getKeyCategory,
     getKeyLabel,
+    getModMorphBinding,
+    inferCategory,
+    sanitizeBehaviorReference,
 } from "./logic/zmkEditor.data";
 import { generateKeymap } from "./logic/zmkEditor.keymap";
 import {
@@ -140,7 +147,18 @@ export default function ZmkEditorPage() {
             const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
 
             if (patch.binding !== undefined) {
+                const previousModMorph = findModMorphForBinding(draft, key.binding);
                 key.binding = patch.binding;
+
+                if (
+                    previousModMorph &&
+                    key.binding.trim() !== getModMorphBinding(previousModMorph.reference) &&
+                    !isModMorphReferenced(draft, previousModMorph)
+                ) {
+                    draft.modMorphs = draft.modMorphs.filter(
+                        (item) => item.id !== previousModMorph.id,
+                    );
+                }
             }
 
             if ("labelOverride" in patch) {
@@ -175,6 +193,123 @@ export default function ZmkEditorPage() {
             binding.label,
             binding.category,
         ));
+    }
+
+    function createModMorphForSelectedKey() {
+        commit((draft) => {
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const normalBinding = key.binding.trim() || "&none";
+            const dotColonPreset = normalBinding === "&kp DOT";
+            const morphedBinding = dotColonPreset ? "&kp COLON" : "&none";
+            const referenceBase = dotColonPreset
+                ? "dot_colon"
+                : `${sanitizeBehaviorReference(deriveLabel(normalBinding))}_morph`;
+            const reference = uniqueModMorphReference(draft, referenceBase);
+            const id = uniqueModMorphId(draft);
+            const displayedLabel = getKeyLabel(key);
+            const category = getKeyCategory(key);
+
+            draft.modMorphs.push({
+                id,
+                reference,
+                normalBinding,
+                morphedBinding,
+                mods: ["MOD_LSFT", "MOD_RSFT"],
+                keepMods: [],
+            });
+
+            draft.layers[draft.currentLayer].keys[draft.selectedKey] = createKey(
+                getModMorphBinding(reference),
+                displayedLabel,
+                category,
+            );
+        });
+    }
+
+    function assignModMorphToSelectedKey(id: string) {
+        commit((draft) => {
+            const behavior = draft.modMorphs.find((item) => item.id === id);
+            if (!behavior) return;
+
+            const label = deriveLabel(behavior.normalBinding);
+            const category = inferCategory(behavior.normalBinding, label);
+            draft.layers[draft.currentLayer].keys[draft.selectedKey] = createKey(
+                getModMorphBinding(behavior.reference),
+                label,
+                category,
+            );
+        });
+    }
+
+    function updateModMorph(
+        id: string,
+        patch: Partial<ZmkModMorph>,
+        record = false,
+    ) {
+        const apply = (draft: ZmkEditorState) => {
+            const behavior = draft.modMorphs.find((item) => item.id === id);
+            if (!behavior) return;
+
+            if (patch.reference !== undefined) {
+                const oldBinding = getModMorphBinding(behavior.reference);
+                const nextReference = uniqueModMorphReference(
+                    draft,
+                    patch.reference,
+                    id,
+                );
+                const nextBinding = getModMorphBinding(nextReference);
+
+                if (oldBinding !== nextBinding) {
+                    replaceBehaviorReference(draft, oldBinding, nextBinding, id);
+                }
+
+                behavior.reference = nextReference;
+            }
+
+            if (patch.normalBinding !== undefined) {
+                behavior.normalBinding = patch.normalBinding;
+            }
+
+            if (patch.morphedBinding !== undefined) {
+                behavior.morphedBinding = patch.morphedBinding;
+            }
+
+            if (patch.mods !== undefined) {
+                behavior.mods = [...new Set(patch.mods)];
+                behavior.keepMods = behavior.keepMods.filter((modifier) =>
+                    behavior.mods.includes(modifier),
+                );
+            }
+
+            if (patch.keepMods !== undefined) {
+                behavior.keepMods = [...new Set(patch.keepMods)]
+                    .filter((modifier) => behavior.mods.includes(modifier));
+            }
+        };
+
+        record ? commit(apply) : updateLive(apply);
+    }
+
+    function detachSelectedModMorph(id: string) {
+        commit((draft) => {
+            const behavior = draft.modMorphs.find((item) => item.id === id);
+            if (!behavior) return;
+
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            if (key.binding.trim() !== getModMorphBinding(behavior.reference)) return;
+
+            const displayedLabel = getKeyLabel(key);
+            const category = getKeyCategory(key);
+            draft.layers[draft.currentLayer].keys[draft.selectedKey] = createKey(
+                behavior.normalBinding.trim() || "&none",
+                displayedLabel,
+                category,
+            );
+
+            if (!isModMorphReferenced(draft, behavior)) {
+                draft.modMorphs = draft.modMorphs.filter((item) => item.id !== id);
+            }
+        });
     }
 
     function undo() {
@@ -338,6 +473,10 @@ export default function ZmkEditorPage() {
                         onCommitKey={(patch) => updateSelectedKey(patch, true)}
                         onReplaceKey={replaceSelectedKey}
                         onApplyQuickBinding={applyQuickBinding}
+                        onCreateModMorph={createModMorphForSelectedKey}
+                        onAssignModMorph={assignModMorphToSelectedKey}
+                        onUpdateModMorph={updateModMorph}
+                        onDetachModMorph={detachSelectedModMorph}
                         onUpdateState={updateLive}
                     />
                 </div>
@@ -376,3 +515,76 @@ function getCoverage(state: ZmkEditorState): Set<string> {
         return labels.some((label) => variants.includes(label));
     }));
 }
+function uniqueModMorphId(state: ZmkEditorState): string {
+    const used = new Set(state.modMorphs.map((behavior) => behavior.id));
+    let index = 1;
+
+    while (used.has(`mod-morph-${index}`)) index += 1;
+    return `mod-morph-${index}`;
+}
+
+function uniqueModMorphReference(
+    state: ZmkEditorState,
+    desired: string,
+    excludeId?: string,
+): string {
+    const base = sanitizeBehaviorReference(desired);
+    const used = new Set(
+        state.modMorphs
+            .filter((behavior) => behavior.id !== excludeId)
+            .map((behavior) => behavior.reference),
+    );
+
+    if (!used.has(base)) return base;
+
+    let index = 2;
+    while (used.has(`${base}_${index}`)) index += 1;
+    return `${base}_${index}`;
+}
+
+function replaceBehaviorReference(
+    state: ZmkEditorState,
+    oldBinding: string,
+    newBinding: string,
+    renamedBehaviorId: string,
+): void {
+    for (const layer of state.layers) {
+        for (const key of layer.keys) {
+            if (key.binding.trim() === oldBinding) {
+                key.binding = newBinding;
+            }
+        }
+    }
+
+    for (const behavior of state.modMorphs) {
+        if (behavior.id === renamedBehaviorId) continue;
+
+        if (behavior.normalBinding.trim() === oldBinding) {
+            behavior.normalBinding = newBinding;
+        }
+        if (behavior.morphedBinding.trim() === oldBinding) {
+            behavior.morphedBinding = newBinding;
+        }
+    }
+}
+
+function isModMorphReferenced(
+    state: ZmkEditorState,
+    target: ZmkModMorph,
+): boolean {
+    const binding = getModMorphBinding(target.reference);
+
+    if (state.layers.some((layer) =>
+        layer.keys.some((key) => key.binding.trim() === binding),
+    )) {
+        return true;
+    }
+
+    return state.modMorphs.some((behavior) =>
+        behavior.id !== target.id && (
+            behavior.normalBinding.trim() === binding ||
+            behavior.morphedBinding.trim() === binding
+        ),
+    );
+}
+

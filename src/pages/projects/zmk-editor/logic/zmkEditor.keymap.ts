@@ -1,17 +1,25 @@
-import type { ZmkEditorState } from "../zmkEditor.types";
-import { sanitizeConstant } from "./zmkEditor.data";
+import type { ZmkEditorState, ZmkModMorph } from "../zmkEditor.types";
+import {
+    sanitizeBehaviorReference,
+    sanitizeConstant,
+} from "./zmkEditor.data";
 
 const ROW_LENGTHS = [12, 12, 12, 6] as const;
 
 export function generateKeymap(state: ZmkEditorState): string {
-    const includes = [
+    const includeLines = [
         "#include <behaviors.dtsi>",
         "#include <dt-bindings/zmk/keys.h>",
         "#include <dt-bindings/zmk/bt.h>",
         "#include <dt-bindings/zmk/outputs.h>",
         "#include <dt-bindings/zmk/rgb.h>",
-        "",
-    ].join("\n");
+    ];
+
+    if (state.modMorphs.length > 0) {
+        includeLines.push("#include <dt-bindings/zmk/modifiers.h>");
+    }
+
+    const includes = `${includeLines.join("\n")}\n\n`;
 
     const definitions = state.layers
         .map((layer, index) => `#define ${sanitizeConstant(layer.constant)} ${index}`)
@@ -21,12 +29,38 @@ export function generateKeymap(state: ZmkEditorState): string {
         .map((_, index) => generateLayerBlock(state, index))
         .join("\n\n");
 
+    const behaviors = generateBehaviors(state);
     const conditional = generateConditionalLayer(state);
     const ledStrip = state.ledCount > 0
         ? `\n\n&led_strip {\n    chain-length = <${state.ledCount}>;\n};\n`
         : "\n";
 
-    return `${includes}${definitions}\n\n/ {${conditional}\n    keymap {\n        compatible = "zmk,keymap";\n\n${indent(layers, 8)}\n    };\n};${ledStrip}`;
+    return `${includes}${definitions}\n\n/ {${behaviors}${conditional}\n    keymap {\n        compatible = "zmk,keymap";\n\n${indent(layers, 8)}\n    };\n};${ledStrip}`;
+}
+
+function generateBehaviors(state: ZmkEditorState): string {
+    if (state.modMorphs.length === 0) return "";
+
+    const definitions = state.modMorphs
+        .map(generateModMorph)
+        .join("\n\n");
+
+    return `\n    behaviors {\n${indent(definitions, 8)}\n    };\n`;
+}
+
+function generateModMorph(behavior: ZmkModMorph): string {
+    const reference = sanitizeBehaviorReference(behavior.reference);
+    const normalBinding = behavior.normalBinding.trim() || "&none";
+    const morphedBinding = behavior.morphedBinding.trim() || "&none";
+    const mods = behavior.mods.length > 0 ? behavior.mods.join("|") : "0";
+    const keepMods = behavior.keepMods.filter((modifier) =>
+        behavior.mods.includes(modifier),
+    );
+    const keepModsLine = keepMods.length > 0
+        ? `\n    keep-mods = <(${keepMods.join("|")})>;`
+        : "";
+
+    return `${reference}: ${reference} {\n    compatible = "zmk,behavior-mod-morph";\n    #binding-cells = <0>;\n    bindings = <${normalBinding}>, <${morphedBinding}>;\n    mods = <(${mods})>;${keepModsLine}\n};`;
 }
 
 function generateConditionalLayer(state: ZmkEditorState): string {

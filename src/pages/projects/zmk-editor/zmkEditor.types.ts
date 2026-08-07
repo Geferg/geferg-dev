@@ -8,6 +8,16 @@ export type KeyCategory =
     | "transparent"
     | "none";
 
+export type ZmkModifier =
+    | "MOD_LSFT"
+    | "MOD_RSFT"
+    | "MOD_LCTL"
+    | "MOD_RCTL"
+    | "MOD_LALT"
+    | "MOD_RALT"
+    | "MOD_LGUI"
+    | "MOD_RGUI";
+
 /**
  * Binding is the source of truth. Presentation fields are explicit overrides
  * and are omitted when automatic derivation is sufficient.
@@ -25,12 +35,26 @@ export type ZmkLayer = {
     keys: ZmkKey[];
 };
 
+/**
+ * A managed zero-parameter ZMK mod-morph behavior. `id` is editor-only and
+ * remains stable if the devicetree reference is renamed.
+ */
+export type ZmkModMorph = {
+    id: string;
+    reference: string;
+    normalBinding: string;
+    morphedBinding: string;
+    mods: ZmkModifier[];
+    keepMods: ZmkModifier[];
+};
+
 export type ZmkEditorState = {
     currentLayer: number;
     selectedKey: number;
     showBindings: boolean;
     triLayer: boolean;
     ledCount: number;
+    modMorphs: ZmkModMorph[];
     layers: ZmkLayer[];
 };
 

@@ -5,6 +5,7 @@ import type {
     QuickBinding,
     ZmkEditorState,
     ZmkKey,
+    ZmkModMorph,
 } from "../zmkEditor.types";
 
 import {
@@ -12,10 +13,12 @@ import {
     QUICK_BINDING_GROUPS,
     createKey,
     deriveLabel,
+    findModMorphForBinding,
     getKeyCategory,
     getKeyLabel,
     sanitizeConstant,
 } from "../logic/zmkEditor.data";
+import ModMorphEditor from "./ModMorphEditor";
 
 export default function KeyInspector({
     state,
@@ -28,6 +31,10 @@ export default function KeyInspector({
     onCommitKey,
     onReplaceKey,
     onApplyQuickBinding,
+    onCreateModMorph,
+    onAssignModMorph,
+    onUpdateModMorph,
+    onDetachModMorph,
     onUpdateState,
 }: {
     state: ZmkEditorState;
@@ -40,6 +47,14 @@ export default function KeyInspector({
     onCommitKey: (patch: Partial<ZmkKey>) => void;
     onReplaceKey: (key: ZmkKey) => void;
     onApplyQuickBinding: (binding: QuickBinding) => void;
+    onCreateModMorph: () => void;
+    onAssignModMorph: (id: string) => void;
+    onUpdateModMorph: (
+        id: string,
+        patch: Partial<ZmkModMorph>,
+        record?: boolean,
+    ) => void;
+    onDetachModMorph: (id: string) => void;
     onUpdateState: (mutator: (draft: ZmkEditorState) => void) => void;
 }) {
     const row = state.selectedKey < 36
@@ -58,6 +73,7 @@ export default function KeyInspector({
     });
     const hasLabelOverride = selectedKey.labelOverride !== undefined;
     const hasCategoryOverride = selectedKey.categoryOverride !== undefined;
+    const managedModMorph = findModMorphForBinding(state, selectedKey.binding);
 
     return (
         <aside className="zmk-editor-inspector">
@@ -80,23 +96,45 @@ export default function KeyInspector({
 
             <div className="zmk-editor-field zmk-editor-field--primary">
                 <label htmlFor="binding">ZMK binding</label>
-                <input
-                    ref={bindingInputRef}
-                    id="binding"
-                    className="font-mono"
-                    type="text"
-                    value={selectedKey.binding}
-                    onFocus={onBeginEdit}
-                    onBlur={onEndEdit}
-                    onChange={(event) => {
-                        onUpdateKey({ binding: event.target.value });
-                    }}
-                />
+                <div className="zmk-editor-binding-row">
+                    <input
+                        ref={bindingInputRef}
+                        id="binding"
+                        className="font-mono"
+                        type="text"
+                        value={selectedKey.binding}
+                        onFocus={onBeginEdit}
+                        onBlur={onEndEdit}
+                        onChange={(event) => {
+                            onUpdateKey({ binding: event.target.value });
+                        }}
+                    />
+                    {managedModMorph && (
+                        <button
+                            type="button"
+                            className="zmk-editor-button zmk-editor-button--ghost zmk-editor-binding-normal"
+                            title={`Restore ${managedModMorph.normalBinding}`}
+                            onClick={() => onDetachModMorph(managedModMorph.id)}
+                        >
+                            Use normal
+                        </button>
+                    )}
+                </div>
                 <p>
                     The visible label and category are derived automatically unless an
                     override is set below.
                 </p>
             </div>
+
+            <ModMorphEditor
+                state={state}
+                selectedKey={selectedKey}
+                onBeginEdit={onBeginEdit}
+                onEndEdit={onEndEdit}
+                onCreate={onCreateModMorph}
+                onAssign={onAssignModMorph}
+                onUpdate={onUpdateModMorph}
+            />
 
             <div className="zmk-editor-override-panel">
                 <div className="zmk-editor-inspector__subhead">

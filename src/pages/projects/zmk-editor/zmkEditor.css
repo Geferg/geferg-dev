@@ -283,9 +283,39 @@
     outline: none;
 }
 
+.zmk-editor-field--primary label {
+    color: color-mix(in srgb, var(--primary) 72%, var(--muted-foreground));
+}
+
 .zmk-editor-field--primary input {
-    border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
-    background: color-mix(in srgb, var(--background) 78%, transparent);
+    border-color: color-mix(in srgb, var(--primary) 56%, var(--border));
+    background: color-mix(in srgb, var(--primary) 6%, var(--background));
+    color: var(--primary);
+    caret-color: var(--primary);
+}
+
+.zmk-editor-field--primary input:focus {
+    border-color: color-mix(in srgb, var(--primary) 82%, var(--border));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 12%, transparent);
+}
+
+.zmk-editor-binding-row {
+    display: flex;
+    align-items: stretch;
+    gap: 0.45rem;
+}
+
+.zmk-editor-binding-row input {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.zmk-editor-binding-normal {
+    min-height: 2.35rem;
+    flex: 0 0 auto;
+    padding-inline: 0.65rem;
+    color: var(--muted-foreground);
+    font-size: 0.7rem;
 }
 
 .zmk-editor-field--secondary input,
@@ -585,4 +615,302 @@
 
 .zmk-editor-page:focus {
     outline: none;
+}
+
+/* Managed mod-morph behaviors */
+.zmk-editor-mod-morph {
+    margin-top: 0.7rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 78%, transparent);
+}
+
+.zmk-editor-mod-morph__summary {
+    display: flex;
+    min-height: 2.45rem;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0.55rem 0.1rem;
+    color: var(--muted-foreground);
+    transition: color 140ms ease;
+}
+
+.zmk-editor-mod-morph__summary::-webkit-details-marker {
+    display: none;
+}
+
+.zmk-editor-mod-morph__summary:hover,
+.zmk-editor-mod-morph[open] > .zmk-editor-mod-morph__summary {
+    color: var(--foreground);
+}
+
+.zmk-editor-mod-morph__summary-copy {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 0.55rem;
+}
+
+.zmk-editor-mod-morph__summary-copy strong {
+    flex: 0 0 auto;
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: inherit;
+}
+
+.zmk-editor-mod-morph__summary-copy small {
+    overflow: hidden;
+    color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
+    font-size: 0.62rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-mod-morph__summary-value {
+    flex: 0 0 auto;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.61rem;
+    color: color-mix(in srgb, var(--muted-foreground) 82%, transparent);
+}
+
+.zmk-editor-mod-morph[data-active="true"] .zmk-editor-mod-morph__summary-value {
+    color: color-mix(in srgb, var(--foreground) 72%, var(--muted-foreground));
+}
+
+.zmk-editor-mod-morph__content {
+    padding: 0.1rem 0 0.65rem;
+}
+
+.zmk-editor-mod-morph__empty {
+    display: grid;
+    gap: 0.5rem;
+}
+
+.zmk-editor-mod-morph__empty > p,
+.zmk-editor-mod-morph__empty > small,
+.zmk-editor-mod-morph__advanced > p,
+.zmk-editor-mod-morph__export-note {
+    font-size: 0.66rem;
+    line-height: 1.45;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-mod-morph__create {
+    width: 100%;
+    color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
+}
+
+.zmk-editor-mod-morph__existing {
+    display: grid;
+    gap: 0.35rem;
+    margin: 0.1rem 0 0.2rem;
+}
+
+.zmk-editor-mod-morph__existing > span {
+    font-size: 0.62rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-mod-morph__existing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.4rem;
+}
+
+.zmk-editor-mod-morph__existing-grid button {
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.5rem;
+    text-align: left;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.zmk-editor-mod-morph__existing-grid button:hover {
+    border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
+    background: color-mix(in srgb, var(--foreground) 3%, transparent);
+}
+
+.zmk-editor-mod-morph__existing-grid strong,
+.zmk-editor-mod-morph__existing-grid span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-mod-morph__existing-grid strong {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.7rem;
+    color: var(--foreground);
+}
+
+.zmk-editor-mod-morph__existing-grid span {
+    margin-top: 0.15rem;
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-mod-morph__editor {
+    margin-top: 0;
+}
+
+.zmk-editor-mod-morph__reference-input {
+    position: relative;
+}
+
+.zmk-editor-mod-morph__reference-input > span {
+    position: absolute;
+    z-index: 1;
+    top: 50%;
+    left: 0.65rem;
+    transform: translateY(-50%);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.72rem;
+    color: var(--muted-foreground);
+    pointer-events: none;
+}
+
+.zmk-editor-mod-morph__reference-input input {
+    padding-left: 1.35rem;
+}
+
+.zmk-editor-mod-morph__bindings {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+}
+
+.zmk-editor-mod-morph__modifier-section {
+    margin-top: 0.85rem;
+}
+
+.zmk-editor-mod-morph__modifier-head {
+    display: grid;
+    gap: 0.12rem;
+    margin-bottom: 0.4rem;
+}
+
+.zmk-editor-mod-morph__modifier-head strong {
+    font-size: 0.7rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-mod-morph__modifier-head span {
+    font-size: 0.62rem;
+    line-height: 1.4;
+    color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
+}
+
+.zmk-editor-mod-morph__modifier-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.zmk-editor-mod-morph__modifier-grid label {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 0.32rem;
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    padding: 0.4rem 0.42rem;
+    font-size: 0.59rem;
+    color: var(--muted-foreground);
+    transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.zmk-editor-mod-morph__modifier-grid label:has(input:checked) {
+    border-color: color-mix(in srgb, var(--foreground) 20%, var(--border));
+    background: color-mix(in srgb, var(--foreground) 4%, transparent);
+    color: var(--foreground);
+}
+
+.zmk-editor-mod-morph__modifier-grid label[data-disabled="true"] {
+    opacity: 0.36;
+}
+
+.zmk-editor-mod-morph__modifier-grid input {
+    width: 0.8rem;
+    height: 0.8rem;
+    flex: 0 0 auto;
+    accent-color: var(--primary);
+}
+
+.zmk-editor-mod-morph__modifier-grid span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-mod-morph__advanced {
+    margin-top: 0.7rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    padding-top: 0.5rem;
+}
+
+.zmk-editor-mod-morph__advanced > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    list-style: none;
+    padding: 0.3rem 0;
+    font-size: 0.68rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-mod-morph__advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.zmk-editor-mod-morph__advanced > summary span:last-child {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.6rem;
+}
+
+.zmk-editor-mod-morph__advanced > p {
+    margin: 0.25rem 0 0.5rem;
+}
+
+.zmk-editor-mod-morph__advanced .zmk-editor-mod-morph__modifier-section {
+    margin-top: 0;
+}
+
+.zmk-editor-mod-morph__export-note {
+    margin-top: 0.65rem;
+    border-top: 1px solid color-mix(in srgb, var(--border) 72%, transparent);
+    padding-top: 0.55rem;
+}
+
+.zmk-editor-mod-morph__export-note code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
+}
+
+@media (max-width: 1120px) {
+    .zmk-editor-mod-morph {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 520px) {
+    .zmk-editor-binding-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .zmk-editor-mod-morph__summary-copy small {
+        display: none;
+    }
+
+    .zmk-editor-mod-morph__bindings,
+    .zmk-editor-mod-morph__existing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .zmk-editor-mod-morph__modifier-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }

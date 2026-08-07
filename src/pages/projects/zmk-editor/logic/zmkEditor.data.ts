@@ -4,9 +4,29 @@ import type {
     QuickBindingGroup,
     ZmkEditorState,
     ZmkKey,
+    ZmkModifier,
+    ZmkModMorph,
 } from "../zmkEditor.types";
 
 export const KEY_COUNT = 42;
+
+export const ZMK_MODIFIER_OPTIONS: ReadonlyArray<{
+    value: ZmkModifier;
+    label: string;
+}> = [
+    { value: "MOD_LSFT", label: "L Shift" },
+    { value: "MOD_RSFT", label: "R Shift" },
+    { value: "MOD_LCTL", label: "L Ctrl" },
+    { value: "MOD_RCTL", label: "R Ctrl" },
+    { value: "MOD_LALT", label: "L Alt" },
+    { value: "MOD_RALT", label: "R Alt" },
+    { value: "MOD_LGUI", label: "L GUI" },
+    { value: "MOD_RGUI", label: "R GUI" },
+];
+
+const VALID_MODIFIERS = new Set<ZmkModifier>(
+    ZMK_MODIFIER_OPTIONS.map((option) => option.value),
+);
 
 export const CATEGORY_LABELS: Record<KeyCategory, string> = {
     default: "Default",
@@ -77,7 +97,7 @@ const LABEL_MAP: Record<string, string> = {
     TAB: "TAB", BSPC: "BCK", ESC: "ESC", RET: "ENT", ENTER: "ENT",
     SPACE: "SPC", LCTRL: "CTRL", RCTRL: "RCTRL", LSHFT: "SHFT",
     RSHFT: "RSHFT", LALT: "ALT", RALT: "ALTGR", LGUI: "GUI", RGUI: "RGUI",
-    COMMA: ",", DOT: ".", FSLH: "/", BSLH: "\\", SEMI: ";", SQT: "'",
+    COMMA: ",", DOT: ".", COLON: ":", FSLH: "/", BSLH: "\\", SEMI: ";", SQT: "'",
     LBKT: "[", RBKT: "]", LBRC: "{", RBRC: "}", LPAR: "(", RPAR: ")",
     MINUS: "-", EQUAL: "=", UNDER: "_", PLUS: "+", PIPE: "|", GRAVE: "`",
     TILDE: "~", EXCL: "!", AT: "@", HASH: "#", DLLR: "$", PRCNT: "%",
@@ -249,6 +269,7 @@ export function createDefaultState(): ZmkEditorState {
         showBindings: true,
         triLayer: true,
         ledCount: 27,
+        modMorphs: [],
         layers: [
             { name: "Base", constant: "BASE", color: "#36d9ff", keys: baseLayer() },
             { name: "Lower", constant: "LOWER", color: "#f0a13a", keys: lowerLayer() },
@@ -288,14 +309,47 @@ export function normalizeState(raw: unknown): ZmkEditorState {
         };
     });
 
+    const modMorphs = normalizeModMorphs(raw.modMorphs);
+
     return {
         currentLayer: clampInteger(raw.currentLayer, 0, layers.length - 1),
         selectedKey: clampInteger(raw.selectedKey, 0, KEY_COUNT - 1),
         showBindings: raw.showBindings !== false,
         triLayer: raw.triLayer !== false,
         ledCount: clampInteger(raw.ledCount, 0, 128),
+        modMorphs,
         layers,
     };
+}
+
+export function sanitizeBehaviorReference(value: string): string {
+    let result = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_]+/g, "_")
+        .replace(/^_+|_+$/g, "");
+
+    if (!result) result = "mod_morph";
+    if (/^\d/.test(result)) result = `mm_${result}`;
+    return result;
+}
+
+export function getModMorphBinding(reference: string): string {
+    return `&${sanitizeBehaviorReference(reference)}`;
+}
+
+export function findModMorphForBinding(
+    state: Pick<ZmkEditorState, "modMorphs">,
+    binding: string,
+): ZmkModMorph | undefined {
+    const trimmed = binding.trim();
+    return state.modMorphs.find(
+        (behavior) => getModMorphBinding(behavior.reference) === trimmed,
+    );
+}
+
+export function isZmkModifier(value: unknown): value is ZmkModifier {
+    return typeof value === "string" && VALID_MODIFIERS.has(value as ZmkModifier);
 }
 
 export function inferCategory(binding = "", label = ""): KeyCategory {
@@ -403,6 +457,59 @@ export function sanitizeConstant(value: string): string {
     if (!result) result = "LAYER";
     if (/^\d/.test(result)) result = `_${result}`;
     return result;
+}
+
+function normalizeModMorphs(candidate: unknown): ZmkModMorph[] {
+    if (!Array.isArray(candidate)) return [];
+
+    const usedIds = new Set<string>();
+    const usedReferences = new Set<string>();
+    const result: ZmkModMorph[] = [];
+
+    for (const [index, rawBehavior] of candidate.slice(0, 64).entries()) {
+        if (!isRecord(rawBehavior)) continue;
+
+        let id = typeof rawBehavior.id === "string" && rawBehavior.id.trim()
+            ? rawBehavior.id.trim()
+            : `mod-morph-${index + 1}`;
+        while (usedIds.has(id)) id = `${id}-${index + 1}`;
+
+        const reference = sanitizeBehaviorReference(
+            typeof rawBehavior.reference === "string"
+                ? rawBehavior.reference
+                : `mod_morph_${index + 1}`,
+        );
+
+        if (usedReferences.has(reference)) continue;
+
+        const mods = normalizeModifiers(rawBehavior.mods);
+        const keepMods = normalizeModifiers(rawBehavior.keepMods)
+            .filter((modifier) => mods.includes(modifier));
+
+        result.push({
+            id,
+            reference,
+            normalBinding: typeof rawBehavior.normalBinding === "string"
+                ? rawBehavior.normalBinding
+                : "&none",
+            morphedBinding: typeof rawBehavior.morphedBinding === "string"
+                ? rawBehavior.morphedBinding
+                : "&none",
+            mods: mods.length > 0 ? mods : ["MOD_LSFT", "MOD_RSFT"],
+            keepMods,
+        });
+
+        usedIds.add(id);
+        usedReferences.add(reference);
+    }
+
+    return result;
+}
+
+function normalizeModifiers(candidate: unknown): ZmkModifier[] {
+    if (!Array.isArray(candidate)) return [];
+
+    return [...new Set(candidate.filter(isZmkModifier))];
 }
 
 function normalizeKey(candidate: unknown, fallback: ZmkKey): ZmkKey {
