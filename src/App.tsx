@@ -4,7 +4,7 @@ import "./index.css";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProjectsPage from "./pages/projects";
 import SolarSystemPage from "./pages/solarSystem";
-import ZmkEditorPage from "./pages/projects/zmk-editor";
+import ZmkEditorPage from "./pages/projects/zmkEditor";
 
 export function App() {
     return (
