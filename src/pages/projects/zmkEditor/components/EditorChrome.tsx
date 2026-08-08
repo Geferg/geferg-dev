@@ -8,7 +8,7 @@ import {
 } from "react";
 
 import type { ZmkEditorState } from "../zmkEditor.types";
-import { KEY_COUNT } from "../logic/zmkEditor.data";
+import { KEY_COUNT, getModeLayerIndices } from "../logic/zmkEditor.data";
 
 export function EditorHeader({
     saveStatus,
@@ -164,35 +164,179 @@ function ProjectMenu({
     );
 }
 
+export function ModeRail({
+    state,
+    onSelect,
+    onAdd,
+    onRename,
+    onDelete,
+}: {
+    state: ZmkEditorState;
+    onSelect: (modeId: string) => void;
+    onAdd: () => void;
+    onRename: (modeId: string, name: string) => void;
+    onDelete: (modeId: string) => void;
+}) {
+    function renameMode(modeId: string, currentName: string) {
+        const nextName = window.prompt("Rename mode", currentName)?.trim();
+        if (nextName && nextName !== currentName) onRename(modeId, nextName);
+    }
+
+    const currentMode = state.modes.find((mode) => mode.id === state.currentMode) ?? state.modes[0];
+
+    return (
+        <div className="zmk-editor-mode-bar">
+            <nav className="zmk-editor-mode-rail" aria-label="Keyboard modes">
+                {state.modes.map((mode, index) => {
+                    const active = mode.id === state.currentMode;
+
+                    return (
+                        <div
+                            key={mode.id}
+                            className="zmk-editor-mode-tab"
+                            data-active={active}
+                        >
+                            <button
+                                type="button"
+                                className="zmk-editor-mode-tab__main"
+                                aria-current={active ? "page" : undefined}
+                                title="Double-click or use the edit button to rename mode"
+                                onClick={() => onSelect(mode.id)}
+                                onDoubleClick={() => renameMode(mode.id, mode.name)}
+                            >
+                                <span className="zmk-editor-mode-tab__index">
+                                    {String(index + 1).padStart(2, "0")}
+                                </span>
+                                <span>{mode.name}</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="zmk-editor-tab-rename"
+                                aria-label={`Rename ${mode.name} mode`}
+                                title={`Rename ${mode.name} mode`}
+                                onClick={() => renameMode(mode.id, mode.name)}
+                            >
+                                ✎
+                            </button>
+                            <button
+                                type="button"
+                                className="zmk-editor-tab-close"
+                                aria-label={`Delete ${mode.name} mode`}
+                                title={`Delete ${mode.name} mode`}
+                                onClick={() => onDelete(mode.id)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    );
+                })}
+
+                <button
+                    type="button"
+                    className="zmk-editor-tab-add"
+                    aria-label="Add mode"
+                    title="Add mode by duplicating the current mode"
+                    onClick={onAdd}
+                >
+                    +
+                </button>
+
+                {currentMode && (
+                    <button
+                        type="button"
+                        className="zmk-editor-mode-rename-action"
+                        title="You can also double-click a mode name to rename it"
+                        onClick={() => renameMode(currentMode.id, currentMode.name)}
+                    >
+                        Rename mode
+                    </button>
+                )}
+            </nav>
+        </div>
+    );
+}
+
 export function LayerRail({
     state,
     onSelect,
+    onAdd,
+    onRename,
+    onDelete,
 }: {
     state: ZmkEditorState;
     onSelect: (index: number) => void;
+    onAdd: () => void;
+    onRename: (index: number, name: string) => void;
+    onDelete: (index: number) => void;
 }) {
+    const layerIndices = getModeLayerIndices(state, state.currentMode);
+
+    function renameLayer(index: number, currentName: string) {
+        const nextName = window.prompt("Rename layer", currentName)?.trim();
+        if (nextName && nextName !== currentName) onRename(index, nextName);
+    }
+
     return (
-        <nav
-            className="zmk-editor-layer-bar zmk-editor-layer-rail"
-            aria-label="Keyboard layers"
-        >
-            {state.layers.map((layer, index) => (
+        <div className="zmk-editor-layer-bar">
+            <nav className="zmk-editor-layer-rail" aria-label="Keyboard layers">
+                {layerIndices.map((layerIndex, localIndex) => {
+                    const layer = state.layers[layerIndex];
+                    const active = layerIndex === state.currentLayer;
+
+                    return (
+                        <div
+                            key={`${layer.modeId}-${layer.constant}-${layerIndex}`}
+                            className="zmk-editor-layer-tab"
+                            data-active={active}
+                            style={{ "--layer-color": layer.color } as CSSProperties}
+                        >
+                            <button
+                                type="button"
+                                className="zmk-editor-layer-tab__main"
+                                aria-current={active ? "page" : undefined}
+                                title="Double-click or use the edit button to rename layer"
+                                onClick={() => onSelect(layerIndex)}
+                                onDoubleClick={() => renameLayer(layerIndex, layer.name)}
+                            >
+                                <span className="zmk-editor-layer-tab__index">
+                                    {String(localIndex + 1).padStart(2, "0")}
+                                </span>
+                                <span className="zmk-editor-layer-tab__dot" />
+                                <span>{layer.name}</span>
+                            </button>
+                            <button
+                                type="button"
+                                className="zmk-editor-tab-rename"
+                                aria-label={`Rename ${layer.name} layer`}
+                                title={`Rename ${layer.name} layer`}
+                                onClick={() => renameLayer(layerIndex, layer.name)}
+                            >
+                                ✎
+                            </button>
+                            <button
+                                type="button"
+                                className="zmk-editor-tab-close"
+                                aria-label={`Delete ${layer.name} layer`}
+                                title={`Delete ${layer.name} layer`}
+                                onClick={() => onDelete(layerIndex)}
+                            >
+                                ×
+                            </button>
+                        </div>
+                    );
+                })}
+
                 <button
-                    key={`${layer.constant}-${index}`}
                     type="button"
-                    className="zmk-editor-layer-tab"
-                    data-active={index === state.currentLayer}
-                    style={{ "--layer-color": layer.color } as CSSProperties}
-                    onClick={() => onSelect(index)}
+                    className="zmk-editor-tab-add zmk-editor-tab-add--layer"
+                    aria-label="Add layer"
+                    title="Add layer"
+                    onClick={onAdd}
                 >
-                    <span className="zmk-editor-layer-tab__index">
-                        {String(index + 1).padStart(2, "0")}
-                    </span>
-                    <span className="zmk-editor-layer-tab__dot" />
-                    <span>{layer.name}</span>
+                    +
                 </button>
-            ))}
-        </nav>
+            </nav>
+        </div>
     );
 }
 
@@ -239,7 +383,7 @@ export function ProjectConfiguration({
                 <label className="zmk-editor-config-card">
                     <span>
                         <strong>Conditional fourth layer</strong>
-                        <small>Lower + Raise activates Alternate.</small>
+                        <small>Within each mode, layers 2 + 3 activate layer 4.</small>
                     </span>
                     <input
                         type="checkbox"
@@ -306,7 +450,7 @@ export function ExportDialog({
                     <p className="zmk-editor-kicker">EXPORT</p>
                     <h2>Generated ZMK keymap</h2>
                     <span>
-                        {state.layers.length} layers · {KEY_COUNT} keys · {state.modMorphs.length} mod-morph{state.modMorphs.length === 1 ? "" : "s"} · {state.triLayer
+                        {state.modes.length} mode{state.modes.length === 1 ? "" : "s"} · {state.layers.length} layers · {KEY_COUNT} keys · {state.modMorphs.length} mod-morph{state.modMorphs.length === 1 ? "" : "s"} · {state.triLayer
                             ? "conditional layer enabled"
                             : "direct layers"}
                     </span>

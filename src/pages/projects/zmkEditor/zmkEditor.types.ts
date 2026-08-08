@@ -28,10 +28,20 @@ export type ZmkKey = {
     categoryOverride?: KeyCategory;
 };
 
+/**
+ * Modes are an editor-side grouping of layers. ZMK still receives one global
+ * flattened layer list at export time.
+ */
+export type ZmkMode = {
+    id: string;
+    name: string;
+};
+
 export type ZmkLayer = {
     name: string;
     constant: string;
     color: string;
+    modeId: string;
     keys: ZmkKey[];
 };
 
@@ -49,12 +59,14 @@ export type ZmkModMorph = {
 };
 
 export type ZmkEditorState = {
+    currentMode: string;
     currentLayer: number;
     selectedKey: number;
     showBindings: boolean;
     triLayer: boolean;
     ledCount: number;
     modMorphs: ZmkModMorph[];
+    modes: ZmkMode[];
     layers: ZmkLayer[];
 };
 

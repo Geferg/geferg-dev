@@ -1,5 +1,10 @@
-import type { ZmkEditorState, ZmkModMorph } from "../zmkEditor.types";
+import type {
+    ZmkEditorState,
+    ZmkLayer,
+    ZmkModMorph,
+} from "../zmkEditor.types";
 import {
+    getModeLayers,
     sanitizeBehaviorReference,
     sanitizeConstant,
 } from "./zmkEditor.data";
@@ -21,16 +26,18 @@ export function generateKeymap(state: ZmkEditorState): string {
 
     const includes = `${includeLines.join("\n")}\n\n`;
 
+    // Modes are an editor abstraction. ZMK receives one global layer index
+    // space in the same deterministic order as state.layers.
     const definitions = state.layers
         .map((layer, index) => `#define ${sanitizeConstant(layer.constant)} ${index}`)
         .join("\n");
 
     const layers = state.layers
-        .map((_, index) => generateLayerBlock(state, index))
+        .map((layer, index) => generateLayerBlock(state, layer, index))
         .join("\n\n");
 
     const behaviors = generateBehaviors(state);
-    const conditional = generateConditionalLayer(state);
+    const conditional = generateConditionalLayers(state);
     const ledStrip = state.ledCount > 0
         ? `\n\n&led_strip {\n    chain-length = <${state.ledCount}>;\n};\n`
         : "\n";
@@ -63,27 +70,31 @@ function generateModMorph(behavior: ZmkModMorph): string {
     return `${reference}: ${reference} {\n    compatible = "zmk,behavior-mod-morph";\n    #binding-cells = <0>;\n    bindings = <${normalBinding}>, <${morphedBinding}>;\n    mods = <(${mods})>;${keepModsLine}\n};`;
 }
 
-function generateConditionalLayer(state: ZmkEditorState): string {
-    if (!state.triLayer || state.layers.length < 4) return "";
+function generateConditionalLayers(state: ZmkEditorState): string {
+    if (!state.triLayer) return "";
 
-    const lower = sanitizeConstant(state.layers[1].constant);
-    const raise = sanitizeConstant(state.layers[2].constant);
-    const alternate = sanitizeConstant(state.layers[3].constant);
+    const definitions = state.modes.flatMap((mode) => {
+        const layers = getModeLayers(state, mode.id);
+        if (layers.length < 4) return [];
 
-    return `
-    conditional_layers {
-        compatible = "zmk,conditional-layers";
+        const lower = sanitizeConstant(layers[1].constant);
+        const raise = sanitizeConstant(layers[2].constant);
+        const alternate = sanitizeConstant(layers[3].constant);
+        const nodeName = `lower_raise_adjust_${sanitizeNodeName(mode.id, 0)}`;
 
-        lower_raise_adjust {
-            if-layers = <${lower} ${raise}>;
-            then-layer = <${alternate}>;
-        };
-    };
-`;
+        return [`        ${nodeName} {\n            if-layers = <${lower} ${raise}>;\n            then-layer = <${alternate}>;\n        };`];
+    });
+
+    if (definitions.length === 0) return "";
+
+    return `\n    conditional_layers {\n        compatible = "zmk,conditional-layers";\n\n${definitions.join("\n\n")}\n    };\n`;
 }
 
-function generateLayerBlock(state: ZmkEditorState, index: number): string {
-    const layer = state.layers[index];
+function generateLayerBlock(
+    state: ZmkEditorState,
+    layer: ZmkLayer,
+    index: number,
+): string {
     const lines: string[] = [];
     let offset = 0;
 
@@ -95,7 +106,12 @@ function generateLayerBlock(state: ZmkEditorState, index: number): string {
         offset += length;
     }
 
-    return `${sanitizeNodeName(layer.name, index)} {\n        bindings = <\n${lines.join("\n")}\n        >;\n    };`;
+    const modePrefix = state.modes.length > 1 && layer.modeId !== "default"
+        ? `${sanitizeNodeName(layer.modeId, index)}_`
+        : "";
+    const nodeName = `${modePrefix}${sanitizeNodeName(layer.name, index)}`;
+
+    return `${nodeName} {\n        bindings = <\n${lines.join("\n")}\n        >;\n    };`;
 }
 
 function sanitizeNodeName(value: string, index: number): string {

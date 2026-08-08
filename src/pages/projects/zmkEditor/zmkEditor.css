@@ -134,16 +134,177 @@
     color: var(--foreground);
 }
 
-.zmk-editor-layer-bar {
-    margin-bottom: 0.75rem;
+.zmk-editor-mode-bar {
+    overflow: clip;
     border-bottom: 1px solid var(--border);
 }
 
+.zmk-editor-mode-rail,
 .zmk-editor-layer-rail {
     display: flex;
+    width: 100%;
     min-width: 0;
-    gap: 0.25rem;
-    overflow-x: auto;
+    flex-wrap: wrap;
+    overflow: clip;
+}
+
+.zmk-editor-mode-rail {
+    align-items: flex-end;
+    gap: 0.15rem;
+    padding-inline: 0.15rem;
+}
+
+.zmk-editor-mode-tab {
+    position: relative;
+    display: inline-flex;
+    min-width: max-content;
+    align-items: center;
+    margin-bottom: 0;
+    border: 1px solid transparent;
+    border-bottom: 0;
+    border-radius: 0.7rem 0.7rem 0 0;
+    color: color-mix(in srgb, var(--muted-foreground) 90%, transparent);
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease,
+        color 150ms ease;
+}
+
+.zmk-editor-mode-tab:hover {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 2.5%, transparent);
+}
+
+.zmk-editor-mode-tab[data-active="true"] {
+    border-color: var(--border);
+    background: color-mix(in srgb, var(--card) 92%, var(--background));
+    color: var(--foreground);
+}
+
+.zmk-editor-mode-tab__main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.58rem 0.42rem 0.58rem 0.82rem;
+    font-size: 0.78rem;
+}
+
+.zmk-editor-mode-tab__index {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.62rem;
+    color: color-mix(in srgb, var(--muted-foreground) 68%, transparent);
+}
+
+.zmk-editor-tab-rename {
+    display: grid;
+    width: 1.45rem;
+    height: 1.45rem;
+    flex: 0 0 auto;
+    place-items: center;
+    border-radius: 0.38rem;
+    color: var(--muted-foreground);
+    font-size: 0.8rem;
+    line-height: 1;
+    opacity: 0.55;
+    transition:
+        opacity 120ms ease,
+        color 120ms ease,
+        background-color 120ms ease;
+}
+
+.zmk-editor-mode-tab[data-active="true"] .zmk-editor-tab-rename,
+.zmk-editor-layer-tab[data-active="true"] .zmk-editor-tab-rename {
+    opacity: 0.72;
+}
+
+.zmk-editor-tab-rename:hover,
+.zmk-editor-tab-rename:focus-visible {
+    opacity: 1;
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.zmk-editor-tab-close {
+    display: grid;
+    width: 1.55rem;
+    height: 1.55rem;
+    margin-right: 0.28rem;
+    place-items: center;
+    border-radius: 0.4rem;
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    line-height: 1;
+    opacity: 0;
+    transition:
+        opacity 120ms ease,
+        color 120ms ease,
+        background-color 120ms ease;
+}
+
+.zmk-editor-mode-tab:hover .zmk-editor-tab-close,
+.zmk-editor-mode-tab[data-active="true"] .zmk-editor-tab-close,
+.zmk-editor-layer-tab:hover .zmk-editor-tab-close,
+.zmk-editor-layer-tab[data-active="true"] .zmk-editor-tab-close,
+.zmk-editor-tab-close:focus-visible {
+    opacity: 0.58;
+}
+
+.zmk-editor-tab-close:hover,
+.zmk-editor-tab-close:focus-visible {
+    opacity: 1 !important;
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 7%, transparent);
+}
+
+.zmk-editor-tab-add {
+    display: grid;
+    flex: 0 0 auto;
+    width: 2rem;
+    height: 2rem;
+    margin: 0 0.2rem 0.18rem;
+    place-items: center;
+    border-radius: 0.55rem;
+    color: color-mix(in srgb, var(--muted-foreground) 78%, transparent);
+    font-size: 1rem;
+    transition:
+        color 140ms ease,
+        background-color 140ms ease;
+}
+
+.zmk-editor-tab-add:hover {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.zmk-editor-mode-rename-action {
+    align-self: center;
+    margin: 0 0.35rem 0.12rem 0.2rem;
+    padding: 0.32rem 0.48rem;
+    border-radius: 0.45rem;
+    color: color-mix(in srgb, var(--muted-foreground) 82%, transparent);
+    font-size: 0.68rem;
+    line-height: 1;
+    transition:
+        color 140ms ease,
+        background-color 140ms ease;
+}
+
+.zmk-editor-mode-rename-action:hover,
+.zmk-editor-mode-rename-action:focus-visible {
+    color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 5%, transparent);
+}
+
+.zmk-editor-layer-bar {
+    overflow: clip;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in srgb, var(--card) 24%, transparent);
+}
+
+.zmk-editor-layer-rail {
+    gap: 0.1rem;
+    align-items: stretch;
 }
 
 .zmk-editor-layer-tab {
@@ -152,18 +313,15 @@
     display: inline-flex;
     min-width: max-content;
     align-items: center;
-    gap: 0.55rem;
-    padding: 0.8rem 1rem 0.85rem;
     color: var(--muted-foreground);
-    font-size: 0.82rem;
     transition: color 160ms ease, background-color 160ms ease;
 }
 
 .zmk-editor-layer-tab::after {
     position: absolute;
-    right: 0.8rem;
-    bottom: -1px;
-    left: 0.8rem;
+    right: 0.6rem;
+    bottom: 0;
+    left: 0.6rem;
     height: 2px;
     transform: scaleX(0);
     transform-origin: left;
@@ -175,24 +333,48 @@
 .zmk-editor-layer-tab:hover,
 .zmk-editor-layer-tab[data-active="true"] {
     color: var(--foreground);
+    background: color-mix(in srgb, var(--foreground) 2.2%, transparent);
 }
 
 .zmk-editor-layer-tab[data-active="true"]::after {
     transform: scaleX(1);
 }
 
+.zmk-editor-layer-tab__main {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.52rem;
+    padding: 0.72rem 0.35rem 0.76rem 0.9rem;
+    font-size: 0.8rem;
+}
+
 .zmk-editor-layer-tab__index {
     font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-    font-size: 0.66rem;
+    font-size: 0.64rem;
     color: color-mix(in srgb, var(--muted-foreground) 72%, transparent);
 }
 
 .zmk-editor-layer-tab__dot {
-    width: 0.45rem;
-    height: 0.45rem;
+    width: 0.42rem;
+    height: 0.42rem;
     border-radius: 999px;
     background: var(--layer-color);
     box-shadow: 0 0 12px color-mix(in srgb, var(--layer-color) 42%, transparent);
+}
+
+.zmk-editor-layer-tab .zmk-editor-tab-close {
+    margin-right: 0.35rem;
+}
+
+.zmk-editor-mode-tab .zmk-editor-tab-rename,
+.zmk-editor-layer-tab .zmk-editor-tab-rename {
+    margin-left: 0.05rem;
+}
+
+.zmk-editor-tab-add--layer {
+    width: 1.8rem;
+    height: 1.8rem;
+    margin-block: 0.36rem 0.3rem;
 }
 
 .zmk-editor-shell {

@@ -8,6 +8,8 @@ import type {
 } from "./zmkEditor.types";
 
 import {
+    createBlankLayer,
+    createDefaultBaseLayer,
     createDefaultState,
     createKey,
     deriveLabel,
@@ -15,9 +17,12 @@ import {
     getCoverage,
     getKeyCategory,
     getKeyLabel,
+    getModeLayerIndices,
+    getModeLayers,
     getModMorphBinding,
     inferCategory,
     sanitizeBehaviorReference,
+    sanitizeConstant,
 } from "./logic/zmkEditor.data";
 import { generateKeymap } from "./logic/zmkEditor.keymap";
 import {
@@ -34,6 +39,7 @@ import {
     EditorHeader,
     ExportDialog,
     LayerRail,
+    ModeRail,
     ProjectConfiguration,
 } from "./components/EditorChrome";
 
@@ -63,6 +69,14 @@ export default function ZmkEditorPage() {
 
     const currentLayer = state.layers[state.currentLayer];
     const selectedKey = currentLayer.keys[state.selectedKey];
+    const currentModeLayerIndices = useMemo(
+        () => getModeLayerIndices(state, state.currentMode),
+        [state.currentMode, state.layers],
+    );
+    const currentModeLayerPosition = Math.max(
+        0,
+        currentModeLayerIndices.indexOf(state.currentLayer),
+    );
     const exportText = useMemo(() => generateKeymap(state), [state]);
     const coveredCharacters = useMemo(
         () => getCoverage(state),
@@ -334,7 +348,7 @@ export default function ZmkEditorPage() {
     }
 
     function resetDefaults() {
-        if (!window.confirm("Reset all layers to the built-in defaults?")) {
+        if (!window.confirm("Reset all modes, layers, and behaviors to the built-in defaults?")) {
             return;
         }
 
@@ -353,6 +367,226 @@ export default function ZmkEditorPage() {
         setSaveStatus(result.ok ? "Local save cleared" : "Could not clear local save");
     }
 
+    function addMode() {
+        commit((draft) => {
+            const sourceMode = draft.modes.find(
+                (mode) => mode.id === draft.currentMode,
+            ) ?? draft.modes[0];
+            const sourceLayers = getModeLayers(draft, sourceMode.id);
+            const modeNumber = nextModeNumber(draft);
+            const modeName = `Mode ${modeNumber}`;
+            const modeId = uniqueModeId(draft, `mode-${modeNumber}`);
+            const constantMap = new Map<string, string>();
+            const reserved = new Set(
+                draft.layers.map((layer) => sanitizeConstant(layer.constant)),
+            );
+
+            const layers = sourceLayers.map((layer, index) => {
+                const suffix = sanitizeConstant(layer.name || `LAYER_${index + 1}`);
+                const desired = `${sanitizeConstant(modeName)}_${suffix}`;
+                const constant = uniqueConstantFromSet(reserved, desired);
+                reserved.add(constant);
+                constantMap.set(sanitizeConstant(layer.constant), constant);
+
+                return {
+                    ...structuredClone(layer),
+                    modeId,
+                    constant,
+                };
+            });
+
+            for (let layerIndex = 0; layerIndex < layers.length; layerIndex += 1) {
+                const sourceLayer = sourceLayers[layerIndex];
+                const layer = layers[layerIndex];
+
+                layer.keys = layer.keys.map((key, keyIndex) => {
+                    const sourceKey = sourceLayer.keys[keyIndex];
+                    const displayedLabel = getKeyLabel(sourceKey);
+                    const remappedBinding = remapLayerConstants(
+                        key.binding,
+                        constantMap,
+                    );
+                    const nextKey = cloneKey(key);
+                    nextKey.binding = remappedBinding;
+
+                    if (
+                        nextKey.labelOverride === undefined &&
+                        deriveLabel(remappedBinding) !== displayedLabel
+                    ) {
+                        nextKey.labelOverride = displayedLabel;
+                    }
+
+                    return nextKey;
+                });
+            }
+
+            draft.modes.push({ id: modeId, name: modeName });
+            const firstLayerIndex = draft.layers.length;
+            draft.layers.push(...layers);
+            draft.currentMode = modeId;
+            draft.currentLayer = firstLayerIndex;
+        });
+    }
+
+    function renameMode(modeId: string, name: string) {
+        commit((draft) => {
+            const mode = draft.modes.find((item) => item.id === modeId);
+            if (mode) mode.name = name.trim() || mode.name;
+        });
+    }
+
+    function deleteMode(modeId: string) {
+        const mode = state.modes.find((item) => item.id === modeId);
+        if (!mode) return;
+
+        if (state.modes.length === 1) {
+            if (!window.confirm(
+                `“${mode.name}” is the only mode. Deleting it will reset the editor to its default mode and layers. Continue?`,
+            )) return;
+
+            setHistory((items) => [...items.slice(-99), state]);
+            setFuture([]);
+            setState(createDefaultState());
+            return;
+        }
+
+        if (!window.confirm(
+            `Delete the “${mode.name}” mode and all of its layers? Bindings elsewhere that target those layers may need updating.`,
+        )) return;
+
+        commit((draft) => {
+            const modeIndex = draft.modes.findIndex((item) => item.id === modeId);
+            const activeModeId = draft.currentMode;
+            const activeLayer = draft.layers[draft.currentLayer];
+
+            draft.modes = draft.modes.filter((item) => item.id !== modeId);
+            draft.layers = draft.layers.filter((layer) => layer.modeId !== modeId);
+
+            if (activeModeId !== modeId) {
+                draft.currentMode = activeModeId;
+                draft.currentLayer = draft.layers.indexOf(activeLayer);
+            } else {
+                const nextMode = draft.modes[
+                    Math.min(modeIndex, draft.modes.length - 1)
+                ];
+                draft.currentMode = nextMode.id;
+                draft.currentLayer = draft.layers.findIndex(
+                    (layer) => layer.modeId === nextMode.id,
+                );
+            }
+
+            draft.selectedKey = Math.min(draft.selectedKey, 41);
+            pruneUnusedModMorphs(draft);
+        });
+    }
+
+    function selectMode(modeId: string) {
+        setState((previous) => {
+            if (previous.currentMode === modeId) return previous;
+
+            const firstLayer = previous.layers.findIndex(
+                (layer) => layer.modeId === modeId,
+            );
+            if (firstLayer < 0) return previous;
+
+            return {
+                ...previous,
+                currentMode: modeId,
+                currentLayer: firstLayer,
+            };
+        });
+    }
+
+    function addLayer() {
+        commit((draft) => {
+            const mode = draft.modes.find((item) => item.id === draft.currentMode);
+            if (!mode) return;
+
+            const indices = getModeLayerIndices(draft, mode.id);
+            const localNumber = indices.length + 1;
+            const prefix = draft.modes.length > 1 || mode.id !== "default"
+                ? `${sanitizeConstant(mode.name)}_`
+                : "";
+            const constant = uniqueLayerConstant(
+                draft,
+                `${prefix}LAYER_${localNumber}`,
+            );
+            const layer = createBlankLayer(
+                mode.id,
+                `Layer ${localNumber}`,
+                constant,
+                nextLayerColor(draft, mode.id),
+            );
+            const insertAt = indices.length > 0
+                ? indices[indices.length - 1] + 1
+                : draft.layers.length;
+
+            draft.layers.splice(insertAt, 0, layer);
+            draft.currentLayer = insertAt;
+        });
+    }
+
+    function renameLayer(layerIndex: number, name: string) {
+        commit((draft) => {
+            const layer = draft.layers[layerIndex];
+            if (layer) layer.name = name.trim() || layer.name;
+        });
+    }
+
+    function deleteLayer(layerIndex: number) {
+        const layer = state.layers[layerIndex];
+        if (!layer) return;
+
+        const mode = state.modes.find((item) => item.id === layer.modeId);
+        const modeLayers = getModeLayers(state, layer.modeId);
+
+        if (modeLayers.length === 1) {
+            if (!window.confirm(
+                `“${layer.name}” is the only layer in ${mode?.name ?? "this mode"}. Deleting it will reset that layer to a default Base layer. Continue?`,
+            )) return;
+
+            commit((draft) => {
+                // Keep the base constant stable so existing &to/&tog bindings
+                // that enter this mode continue to target it after reset.
+                const constant = sanitizeConstant(layer.constant);
+                draft.layers[layerIndex] = createDefaultBaseLayer(
+                    layer.modeId,
+                    constant,
+                    true,
+                );
+                draft.currentMode = layer.modeId;
+                draft.currentLayer = layerIndex;
+                draft.selectedKey = 0;
+                pruneUnusedModMorphs(draft);
+            });
+            return;
+        }
+
+        if (!window.confirm(
+            `Delete the “${layer.name}” layer? Bindings elsewhere that target ${layer.constant} may need updating.`,
+        )) return;
+
+        commit((draft) => {
+            const activeLayer = draft.layers[draft.currentLayer];
+            const localIndices = getModeLayerIndices(draft, layer.modeId);
+            const localIndex = localIndices.indexOf(layerIndex);
+            draft.layers.splice(layerIndex, 1);
+
+            const activeIndex = draft.layers.indexOf(activeLayer);
+            if (activeIndex >= 0) {
+                draft.currentLayer = activeIndex;
+            } else {
+                const remaining = getModeLayerIndices(draft, layer.modeId);
+                draft.currentLayer = remaining[
+                    Math.min(Math.max(localIndex, 0), remaining.length - 1)
+                ];
+            }
+
+            draft.currentMode = draft.layers[draft.currentLayer].modeId;
+            pruneUnusedModMorphs(draft);
+        });
+    }
+
     const selectKey = useCallback((index: number) => {
         setState((previous) => ({
             ...previous,
@@ -361,10 +595,29 @@ export default function ZmkEditorPage() {
     }, []);
 
     const selectLayer = useCallback((index: number) => {
-        setState((previous) => ({
-            ...previous,
-            currentLayer: index,
-        }));
+        setState((previous) => {
+            const layer = previous.layers[index];
+            if (!layer) return previous;
+
+            return {
+                ...previous,
+                currentMode: layer.modeId,
+                currentLayer: index,
+            };
+        });
+    }, []);
+
+    const selectModeLayer = useCallback((localIndex: number) => {
+        setState((previous) => {
+            const indices = getModeLayerIndices(previous, previous.currentMode);
+            const layerIndex = indices[localIndex];
+            if (layerIndex === undefined) return previous;
+
+            return {
+                ...previous,
+                currentLayer: layerIndex,
+            };
+        });
     }, []);
 
     function startReplaceBinding() {
@@ -418,13 +671,13 @@ export default function ZmkEditorPage() {
     useZmkEditorVimMotions({
         enabled: VIM_MOTIONS_ENABLED,
         selectedKey: state.selectedKey,
-        currentLayer: state.currentLayer,
-        layerCount: state.layers.length,
+        currentLayer: currentModeLayerPosition,
+        layerCount: currentModeLayerIndices.length,
         editorRootRef,
         bindingInputRef,
         displayLabelInputRef,
         onSelectKey: selectKey,
-        onSelectLayer: selectLayer,
+        onSelectLayer: selectModeLayer,
         onStartReplaceBinding: startReplaceBinding,
         onYankKey: yankSelectedKey,
         onDeleteKey: deleteSelectedKey,
@@ -454,9 +707,20 @@ export default function ZmkEditorPage() {
                     onClearLocalSave={clearLocalSave}
                 />
 
+                <ModeRail
+                    state={state}
+                    onSelect={selectMode}
+                    onAdd={addMode}
+                    onRename={renameMode}
+                    onDelete={deleteMode}
+                />
+
                 <LayerRail
                     state={state}
                     onSelect={selectLayer}
+                    onAdd={addLayer}
+                    onRename={renameLayer}
+                    onDelete={deleteLayer}
                 />
 
                 <div className="zmk-editor-shell">
@@ -579,3 +843,112 @@ function isModMorphReferenced(
     );
 }
 
+
+function nextModeNumber(state: ZmkEditorState): number {
+    const usedNames = new Set(state.modes.map((mode) => mode.name.toLowerCase()));
+    let index = 2;
+
+    while (usedNames.has(`mode ${index}`)) index += 1;
+    return index;
+}
+
+function uniqueModeId(state: ZmkEditorState, desired: string): string {
+    const used = new Set(state.modes.map((mode) => mode.id));
+    const base = desired
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "") || "mode";
+
+    if (!used.has(base)) return base;
+
+    let index = 2;
+    while (used.has(`${base}-${index}`)) index += 1;
+    return `${base}-${index}`;
+}
+
+function uniqueLayerConstant(
+    state: ZmkEditorState,
+    desired: string,
+    excludeIndex?: number,
+): string {
+    const reserved = new Set(
+        state.layers
+            .filter((_, index) => index !== excludeIndex)
+            .map((layer) => sanitizeConstant(layer.constant)),
+    );
+
+    return uniqueConstantFromSet(reserved, desired);
+}
+
+function uniqueConstantFromSet(reserved: Set<string>, desired: string): string {
+    const base = sanitizeConstant(desired);
+    if (!reserved.has(base)) return base;
+
+    let index = 2;
+    while (reserved.has(`${base}_${index}`)) index += 1;
+    return `${base}_${index}`;
+}
+
+function remapLayerConstants(
+    binding: string,
+    constantMap: Map<string, string>,
+): string {
+    let result = binding;
+
+    const entries = [...constantMap.entries()].sort(
+        ([left], [right]) => right.length - left.length,
+    );
+
+    for (const [oldConstant, newConstant] of entries) {
+        const escaped = oldConstant.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        result = result.replace(
+            new RegExp(`\\b${escaped}\\b`, "g"),
+            newConstant,
+        );
+    }
+
+    return result;
+}
+
+function nextLayerColor(state: ZmkEditorState, modeId: string): string {
+    const palette = [
+        "#36d9ff",
+        "#f0a13a",
+        "#e86671",
+        "#c678dd",
+        "#7fd88f",
+        "#75a7ff",
+    ];
+    const count = getModeLayers(state, modeId).length;
+    return palette[count % palette.length];
+}
+
+function pruneUnusedModMorphs(state: ZmkEditorState): void {
+    const byBinding = new Map(
+        state.modMorphs.map((behavior) => [
+            getModMorphBinding(behavior.reference),
+            behavior,
+        ]),
+    );
+    const reachable = new Set<string>();
+    const queue = state.layers.flatMap((layer) =>
+        layer.keys.map((key) => key.binding.trim()),
+    );
+
+    while (queue.length > 0) {
+        const binding = queue.pop()!;
+        const behavior = byBinding.get(binding);
+        if (!behavior || reachable.has(behavior.id)) continue;
+
+        reachable.add(behavior.id);
+        queue.push(
+            behavior.normalBinding.trim(),
+            behavior.morphedBinding.trim(),
+        );
+    }
+
+    state.modMorphs = state.modMorphs.filter((behavior) =>
+        reachable.has(behavior.id),
+    );
+}

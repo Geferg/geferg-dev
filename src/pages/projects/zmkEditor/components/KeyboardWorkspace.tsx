@@ -6,6 +6,7 @@ import {
     getKeyCategory,
     getKeyLabel,
     getKeyPosition,
+    getModeLayerIndices,
 } from "../logic/zmkEditor.data";
 
 import "./keyboardWorkspace.css";
@@ -35,19 +36,25 @@ export default function KeyboardWorkspace({
     onToggleCoverage: () => void;
 }) {
     const layer = state.layers[state.currentLayer];
+    const mode = state.modes.find((item) => item.id === state.currentMode);
+    const modeLayerIndices = getModeLayerIndices(state, state.currentMode);
+    const localLayerIndex = Math.max(0, modeLayerIndices.indexOf(state.currentLayer));
 
     return (
         <section className="zmk-editor-workspace">
             <div className="zmk-editor-workspace__meta">
                 <div>
                     <span className="zmk-editor-kicker">
-                        LAYER {String(state.currentLayer + 1).padStart(2, "0")}
+                        {state.modes.length > 1 && mode
+                            ? `${mode.name.toUpperCase()} · `
+                            : ""}
+                        LAYER {String(localLayerIndex + 1).padStart(2, "0")}
                     </span>
                     <strong>{layer.name}</strong>
                 </div>
                 <span className="font-mono text-xs text-muted-foreground">
                     {KEY_COUNT} keys
-                    {state.triLayer && state.currentLayer === 3
+                    {state.triLayer && localLayerIndex === 3
                         ? " · conditional layer"
                         : ""}
                 </span>
@@ -139,7 +146,7 @@ function CoveragePanel({
             >
                 <span>
                     <strong>Character coverage</strong>
-                    <small>Visible-label checklist across all layers</small>
+                    <small>Visible-label checklist across all modes and layers</small>
                 </span>
 
                 <span className="font-mono text-xs text-muted-foreground">

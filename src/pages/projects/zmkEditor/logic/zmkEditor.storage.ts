@@ -45,10 +45,10 @@ export type ZmkKeyRegisterEntry = {
 
 export const zmkEditorStateStore = siteStorage.createStore<ZmkEditorState>({
     key: "zmk-editor:state",
-    version: 1,
+    version: 2,
     codec: {
         decode(value, storedVersion) {
-            if (storedVersion !== 1 || !isEditorStateCandidate(value)) {
+            if ((storedVersion !== 1 && storedVersion !== 2) || !isEditorStateCandidate(value)) {
                 return null;
             }
 
@@ -173,12 +173,12 @@ function removeLegacyEditorState(): void {
     }
 }
 
-function isEditorStateCandidate(value: unknown): value is ZmkEditorState {
+function isEditorStateCandidate(value: unknown): boolean {
     if (!value || typeof value !== "object") {
         return false;
     }
 
-    const candidate = value as Partial<ZmkEditorState>;
+    const candidate = value as { layers?: unknown };
 
     return (
         Array.isArray(candidate.layers) &&

@@ -74,6 +74,38 @@ export default function KeyInspector({
     const hasLabelOverride = selectedKey.labelOverride !== undefined;
     const hasCategoryOverride = selectedKey.categoryOverride !== undefined;
     const managedModMorph = findModMorphForBinding(state, selectedKey.binding);
+    const currentModeLayers = state.layers.filter(
+        (layer) => layer.modeId === state.currentMode,
+    );
+    const layerQuickBindings: QuickBinding[] = currentModeLayers
+        .slice(1)
+        .map((layer) => ({
+            name: `${layer.name} hold`,
+            binding: `&mo ${layer.constant}`,
+            label: layer.name.toUpperCase().slice(0, 8),
+            category: "layer",
+        }));
+    const modeQuickBindings: QuickBinding[] = state.modes.flatMap((mode) => {
+        const baseLayer = state.layers.find((layer) => layer.modeId === mode.id);
+        if (!baseLayer) return [];
+
+        return [{
+            name: `Switch to ${mode.name}`,
+            binding: `&to ${baseLayer.constant}`,
+            label: mode.name.toUpperCase().slice(0, 8),
+            category: "layer" as const,
+        }];
+    });
+    const quickBindingGroups = [
+        ...(state.modes.length > 1
+            ? [{ name: "Modes", bindings: modeQuickBindings }]
+            : []),
+        ...QUICK_BINDING_GROUPS.map((group) =>
+            group.name === "Layers"
+                ? { name: group.name, bindings: layerQuickBindings }
+                : group,
+        ).filter((group) => group.bindings.length > 0),
+    ];
 
     return (
         <aside className="zmk-editor-inspector">
@@ -254,7 +286,7 @@ export default function KeyInspector({
                     <span>Apply to selected key</span>
                 </div>
 
-                {QUICK_BINDING_GROUPS.map((group, index) => (
+                {quickBindingGroups.map((group, index) => (
                     <details key={group.name} open={index === 0}>
                         <summary>{group.name}</summary>
                         <div className="zmk-editor-quick-bindings__grid">

@@ -4,6 +4,8 @@ import type {
     QuickBindingGroup,
     ZmkEditorState,
     ZmkKey,
+    ZmkLayer,
+    ZmkMode,
     ZmkModifier,
     ZmkModMorph,
 } from "../zmkEditor.types";
@@ -311,21 +313,80 @@ function adjustLayer(): ZmkKey[] {
     return keys;
 }
 
+const DEFAULT_MODE_ID = "default";
+const MAX_MODES = 12;
+const MAX_LAYERS = 48;
+
 export function createDefaultState(): ZmkEditorState {
     return {
+        currentMode: DEFAULT_MODE_ID,
         currentLayer: 0,
         selectedKey: 0,
         showBindings: true,
         triLayer: true,
         ledCount: 27,
         modMorphs: [],
+        modes: [
+            { id: DEFAULT_MODE_ID, name: "Default" },
+        ],
         layers: [
-            { name: "Base", constant: "BASE", color: "#36d9ff", keys: baseLayer() },
-            { name: "Lower", constant: "LOWER", color: "#f0a13a", keys: lowerLayer() },
-            { name: "Raise", constant: "RAISE", color: "#e86671", keys: raiseLayer() },
-            { name: "Alternate", constant: "ADJUST", color: "#c678dd", keys: adjustLayer() },
+            createLayer(DEFAULT_MODE_ID, "Base", "BASE", "#36d9ff", baseLayer()),
+            createLayer(DEFAULT_MODE_ID, "Lower", "LOWER", "#f0a13a", lowerLayer()),
+            createLayer(DEFAULT_MODE_ID, "Raise", "RAISE", "#e86671", raiseLayer()),
+            createLayer(DEFAULT_MODE_ID, "Alternate", "ADJUST", "#c678dd", adjustLayer()),
         ],
     };
+}
+
+export function createBlankLayer(
+    modeId: string,
+    name = "Layer",
+    constant = "LAYER",
+    color = "#36d9ff",
+): ZmkLayer {
+    return createLayer(modeId, name, constant, color, transparentLayer());
+}
+
+export function createDefaultBaseLayer(
+    modeId: string,
+    constant = "BASE",
+    standalone = false,
+): ZmkLayer {
+    const keys = baseLayer();
+
+    if (standalone) {
+        // A one-layer mode cannot safely keep the default LOWER/RAISE holds.
+        keys[37] = createKey("&trans");
+        keys[40] = createKey("&trans");
+    }
+
+    return createLayer(modeId, "Base", constant, "#36d9ff", keys);
+}
+
+export function getModeLayers(
+    state: Pick<ZmkEditorState, "layers">,
+    modeId: string,
+): ZmkLayer[] {
+    return state.layers.filter((layer) => layer.modeId === modeId);
+}
+
+export function getModeLayerIndices(
+    state: Pick<ZmkEditorState, "layers">,
+    modeId: string,
+): number[] {
+    const indices: number[] = [];
+
+    state.layers.forEach((layer, index) => {
+        if (layer.modeId === modeId) indices.push(index);
+    });
+
+    return indices;
+}
+
+export function getCurrentMode(
+    state: Pick<ZmkEditorState, "modes" | "currentMode">,
+): ZmkMode {
+    return state.modes.find((mode) => mode.id === state.currentMode) ?? state.modes[0];
 }
 
 export function normalizeState(raw: unknown): ZmkEditorState {
@@ -335,10 +396,17 @@ export function normalizeState(raw: unknown): ZmkEditorState {
         return fallback;
     }
 
-    const layers = raw.layers.slice(0, 12).map((candidate, layerIndex) => {
+    const modes = normalizeModes(raw.modes);
+    const fallbackModeId = modes[0].id;
+    const knownModeIds = new Set(modes.map((mode) => mode.id));
+
+    const layers = raw.layers.slice(0, MAX_LAYERS).map((candidate, layerIndex) => {
         const fallbackLayer = fallback.layers[layerIndex] ?? fallback.layers[0];
         const layer = isRecord(candidate) ? candidate : {};
         const rawKeys = Array.isArray(layer.keys) ? layer.keys : [];
+        const modeId = typeof layer.modeId === "string" && knownModeIds.has(layer.modeId)
+            ? layer.modeId
+            : fallbackModeId;
 
         return {
             name: typeof layer.name === "string" && layer.name.trim()
@@ -352,23 +420,114 @@ export function normalizeState(raw: unknown): ZmkEditorState {
             color: typeof layer.color === "string"
                 ? layer.color
                 : fallbackLayer.color,
+            modeId,
             keys: Array.from({ length: KEY_COUNT }, (_, keyIndex) =>
                 normalizeKey(rawKeys[keyIndex], fallbackLayer.keys[keyIndex]),
             ),
         };
     });
 
+    // A saved mode must never become an empty, unselectable tab. If data was
+    // partially edited or imported, give it one transparent layer instead.
+    for (const mode of modes) {
+        if (!layers.some((layer) => layer.modeId === mode.id)) {
+            layers.push(createBlankLayer(
+                mode.id,
+                "Base",
+                uniqueConstantForLayers(layers, `${sanitizeConstant(mode.name)}_BASE`),
+            ));
+        }
+    }
+
+    const requestedMode = typeof raw.currentMode === "string"
+        ? raw.currentMode
+        : fallbackModeId;
+    const currentMode = knownModeIds.has(requestedMode)
+        ? requestedMode
+        : fallbackModeId;
+    const modeLayerIndices = layers
+        .map((layer, index) => layer.modeId === currentMode ? index : -1)
+        .filter((index) => index >= 0);
+    const requestedLayer = clampInteger(raw.currentLayer, 0, layers.length - 1);
+    const currentLayer = modeLayerIndices.includes(requestedLayer)
+        ? requestedLayer
+        : modeLayerIndices[0] ?? 0;
+
     const modMorphs = normalizeModMorphs(raw.modMorphs);
 
     return {
-        currentLayer: clampInteger(raw.currentLayer, 0, layers.length - 1),
+        currentMode,
+        currentLayer,
         selectedKey: clampInteger(raw.selectedKey, 0, KEY_COUNT - 1),
         showBindings: raw.showBindings !== false,
         triLayer: raw.triLayer !== false,
         ledCount: clampInteger(raw.ledCount, 0, 128),
         modMorphs,
+        modes,
         layers,
     };
+}
+
+function createLayer(
+    modeId: string,
+    name: string,
+    constant: string,
+    color: string,
+    keys: ZmkKey[],
+): ZmkLayer {
+    return { modeId, name, constant, color, keys };
+}
+
+function normalizeModes(candidate: unknown): ZmkMode[] {
+    if (!Array.isArray(candidate) || candidate.length === 0) {
+        return [{ id: DEFAULT_MODE_ID, name: "Default" }];
+    }
+
+    const result: ZmkMode[] = [];
+    const usedIds = new Set<string>();
+
+    for (const [index, rawMode] of candidate.slice(0, MAX_MODES).entries()) {
+        if (!isRecord(rawMode)) continue;
+
+        let id = typeof rawMode.id === "string" && rawMode.id.trim()
+            ? sanitizeModeId(rawMode.id)
+            : `mode-${index + 1}`;
+        let suffix = 2;
+        const baseId = id;
+        while (usedIds.has(id)) id = `${baseId}-${suffix++}`;
+
+        result.push({
+            id,
+            name: typeof rawMode.name === "string" && rawMode.name.trim()
+                ? rawMode.name.trim()
+                : `Mode ${index + 1}`,
+        });
+        usedIds.add(id);
+    }
+
+    return result.length > 0
+        ? result
+        : [{ id: DEFAULT_MODE_ID, name: "Default" }];
+}
+
+function sanitizeModeId(value: string): string {
+    const result = value
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+    return result || "mode";
+}
+
+function uniqueConstantForLayers(layers: ZmkLayer[], desired: string): string {
+    const base = sanitizeConstant(desired);
+    const used = new Set(layers.map((layer) => sanitizeConstant(layer.constant)));
+
+    if (!used.has(base)) return base;
+
+    let index = 2;
+    while (used.has(`${base}_${index}`)) index += 1;
+    return `${base}_${index}`;
 }
 
 export function sanitizeBehaviorReference(value: string): string {
