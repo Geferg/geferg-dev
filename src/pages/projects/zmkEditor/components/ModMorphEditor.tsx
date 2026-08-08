@@ -56,7 +56,7 @@ export default function ModMorphEditor({
                 </span>
             </summary>
 
-            <div className="zmk-editor-mod-morph__content zmk-editor-mod-morph__content--nested">
+            <div className="zmk-editor-mod-morph__content">
                 {behavior ? (
                     <ManagedModMorph
                         behavior={behavior}
@@ -220,28 +220,30 @@ function ManagedModMorph({
                     setModifier(modifier, checked, "mods")}
             />
 
-            <details className="zmk-editor-mod-morph__advanced">
-                <summary>
-                    <span>Keep modifiers</span>
-                    <span>{behavior.keepMods.length || "none"}</span>
-                </summary>
-                <p>
-                    Trigger modifiers are masked by default. Keep selected ones held
-                    while the modified binding runs.
-                </p>
-                <ModifierGrid
-                    title=""
-                    description=""
-                    selected={behavior.keepMods}
-                    available={behavior.mods}
-                    onChange={(modifier, checked) =>
-                        setModifier(modifier, checked, "keepMods")}
-                />
-            </details>
+            <div className="zmk-editor-mod-morph__nested">
+                <details className="zmk-editor-mod-morph__advanced">
+                    <summary>
+                        <span>Keep modifiers</span>
+                        <span>{behavior.keepMods.length || "none"}</span>
+                    </summary>
+                    <p>
+                        Trigger modifiers are masked by default. Keep selected ones held
+                        while the modified binding runs.
+                    </p>
+                    <ModifierGrid
+                        title=""
+                        description=""
+                        selected={behavior.keepMods}
+                        available={behavior.mods}
+                        onChange={(modifier, checked) =>
+                            setModifier(modifier, checked, "keepMods")}
+                    />
+                </details>
 
-            <p className="zmk-editor-mod-morph__export-note">
-                Exported as <code>{getModMorphBinding(behavior.reference)}</code>
-            </p>
+                <p className="zmk-editor-mod-morph__export-note">
+                    Exported as <code>{getModMorphBinding(behavior.reference)}</code>
+                </p>
+            </div>
         </div>
     );
 }
