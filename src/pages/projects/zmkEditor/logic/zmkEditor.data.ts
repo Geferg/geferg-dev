@@ -876,8 +876,8 @@ export function getKeyPosition(index: number): KeyPosition {
     const height = 68;
     const leftX = [20, 100, 180, 260, 340, 420];
     const rightX = [508, 588, 668, 748, 828, 908];
-    const leftY = [70, 52, 34, 44, 60, 78];
-    const rightY = [78, 60, 44, 34, 52, 70];
+    const leftY = [70, 70, 52, 34, 52, 70];
+    const rightY = [70, 52, 34, 52, 70, 70];
 
     if (index < 36) {
         const row = Math.floor(index / 12);
