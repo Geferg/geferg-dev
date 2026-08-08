@@ -1,5 +1,6 @@
 import type {
     ZmkEditorState,
+    ZmkHoldTap,
     ZmkLayer,
     ZmkModMorph,
 } from "../zmkEditor.types";
@@ -46,13 +47,51 @@ export function generateKeymap(state: ZmkEditorState): string {
 }
 
 function generateBehaviors(state: ZmkEditorState): string {
-    if (state.modMorphs.length === 0) return "";
+    if (state.modMorphs.length === 0 && state.holdTaps.length === 0) return "";
 
-    const definitions = state.modMorphs
-        .map(generateModMorph)
-        .join("\n\n");
+    const definitions = [
+        ...state.holdTaps.map(generateHoldTap),
+        ...state.modMorphs.map(generateModMorph),
+    ].join("\n\n");
 
     return `\n    behaviors {\n${indent(definitions, 8)}\n    };\n`;
+}
+
+function generateHoldTap(behavior: ZmkHoldTap): string {
+    const reference = sanitizeBehaviorReference(behavior.reference);
+    const lines = [
+        `${reference}: ${reference} {`,
+        `    compatible = "zmk,behavior-hold-tap";`,
+        `    #binding-cells = <2>;`,
+        `    flavor = "${behavior.flavor}";`,
+        `    tapping-term-ms = <${behavior.tappingTermMs}>;`,
+    ];
+
+    if (behavior.quickTapMs !== undefined) {
+        lines.push(`    quick-tap-ms = <${behavior.quickTapMs}>;`);
+    }
+    if (behavior.requirePriorIdleMs !== undefined) {
+        lines.push(`    require-prior-idle-ms = <${behavior.requirePriorIdleMs}>;`);
+    }
+
+    lines.push(`    bindings = <${behavior.holdBehavior}>, <${behavior.tapBehavior}>;`);
+
+    if (behavior.retroTap) lines.push("    retro-tap;");
+    if (behavior.holdWhileUndecided) lines.push("    hold-while-undecided;");
+    if (behavior.holdWhileUndecidedLinger) {
+        lines.push("    hold-while-undecided-linger;");
+    }
+    if (behavior.holdTriggerKeyPositions.length > 0) {
+        lines.push(
+            `    hold-trigger-key-positions = <${behavior.holdTriggerKeyPositions.join(" ")}>;`,
+        );
+    }
+    if (behavior.holdTriggerKeyPositions.length > 0 && behavior.holdTriggerOnRelease) {
+        lines.push("    hold-trigger-on-release;");
+    }
+
+    lines.push("};");
+    return lines.join("\n");
 }
 
 function generateModMorph(behavior: ZmkModMorph): string {

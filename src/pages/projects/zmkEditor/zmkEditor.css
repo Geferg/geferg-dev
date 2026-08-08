@@ -1096,3 +1096,285 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
+
+/* Managed tap / hold behaviors */
+.zmk-editor-hold-tap__preset {
+    display: grid;
+    gap: 0.45rem;
+    border: 1px solid color-mix(in srgb, var(--primary) 18%, var(--border));
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--primary) 3%, transparent);
+    padding: 0.65rem;
+}
+
+.zmk-editor-hold-tap__preset-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.zmk-editor-hold-tap__preset-head > span:first-child {
+    display: grid;
+    gap: 0.08rem;
+}
+
+.zmk-editor-hold-tap__preset-head strong {
+    font-size: 0.68rem;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.zmk-editor-hold-tap__preset-head small,
+.zmk-editor-hold-tap__preset > small {
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-hold-tap__preset-head > span:last-child {
+    border: 1px solid color-mix(in srgb, var(--primary) 22%, var(--border));
+    border-radius: 999px;
+    padding: 0.18rem 0.4rem;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.55rem;
+    color: color-mix(in srgb, var(--primary) 70%, var(--foreground));
+}
+
+.zmk-editor-hold-tap__preset-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.35rem;
+}
+
+.zmk-editor-hold-tap__preset-grid button {
+    display: grid;
+    gap: 0.1rem;
+    min-width: 0;
+    border: 1px solid var(--border);
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.35rem;
+    text-align: left;
+    transition: border-color 140ms ease, background-color 140ms ease;
+}
+
+.zmk-editor-hold-tap__preset-grid button:hover {
+    border-color: color-mix(in srgb, var(--primary) 35%, var(--border));
+    background: color-mix(in srgb, var(--primary) 5%, transparent);
+}
+
+.zmk-editor-hold-tap__preset-grid strong {
+    font-size: 0.63rem;
+    color: var(--foreground);
+}
+
+.zmk-editor-hold-tap__preset-grid span {
+    overflow: hidden;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.55rem;
+    color: var(--muted-foreground);
+    text-overflow: ellipsis;
+}
+
+.zmk-editor-hold-tap__managed-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+    border-radius: 0.5rem;
+    background: color-mix(in srgb, var(--primary) 4%, transparent);
+    padding: 0.42rem 0.5rem;
+}
+
+.zmk-editor-hold-tap__managed-head > div {
+    display: flex;
+    min-width: 0;
+    align-items: baseline;
+    gap: 0.5rem;
+}
+
+.zmk-editor-hold-tap__managed-head span {
+    flex: 0 0 auto;
+    font-size: 0.6rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-hold-tap__managed-head strong {
+    overflow: hidden;
+    font-size: 0.66rem;
+    font-weight: 500;
+    color: var(--foreground);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-hold-tap__clear {
+    flex: 0 0 auto;
+    font-size: 0.6rem;
+    color: color-mix(in srgb, var(--muted-foreground) 88%, transparent);
+}
+
+.zmk-editor-hold-tap__clear:hover {
+    color: var(--foreground);
+}
+
+.zmk-editor-hold-tap__actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.55rem;
+}
+
+.zmk-editor-hold-tap__action {
+    min-width: 0;
+}
+
+.zmk-editor-hold-tap__action label {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.35rem;
+    font-size: 0.66rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-hold-tap__action label span:last-child {
+    overflow: hidden;
+    font-size: 0.58rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.zmk-editor-hold-tap__action input {
+    width: 100%;
+}
+
+.zmk-editor-hold-tap__timing-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.45rem;
+    margin-top: 0.65rem;
+}
+
+.zmk-editor-hold-tap__nested {
+    margin-top: 0.65rem;
+    margin-left: 0.55rem;
+    border-left: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+    padding-left: 0.65rem;
+}
+
+.zmk-editor-hold-tap__advanced {
+    border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    padding-top: 0.5rem;
+}
+
+.zmk-editor-hold-tap__advanced > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0.3rem 0;
+    font-size: 0.68rem;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-hold-tap__advanced > summary::-webkit-details-marker {
+    display: none;
+}
+
+.zmk-editor-hold-tap__advanced > summary:hover,
+.zmk-editor-hold-tap__advanced[open] > summary {
+    color: var(--foreground);
+}
+
+.zmk-editor-hold-tap__advanced > summary span:last-child {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.6rem;
+}
+
+.zmk-editor-hold-tap__advanced > .zmk-editor-field {
+    margin-top: 0.5rem;
+}
+
+.zmk-editor-hold-tap__switches {
+    display: grid;
+    gap: 0.35rem;
+    margin-top: 0.55rem;
+}
+
+.zmk-editor-hold-tap__switch {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.65rem;
+    padding: 0.5rem 0.55rem;
+}
+
+.zmk-editor-hold-tap__switch > span {
+    display: grid;
+    gap: 0.08rem;
+}
+
+.zmk-editor-hold-tap__switch strong,
+.zmk-editor-hold-tap__switch small {
+    display: block;
+}
+
+.zmk-editor-hold-tap__switch strong {
+    font-size: 0.64rem;
+    font-weight: 500;
+    color: var(--foreground);
+}
+
+.zmk-editor-hold-tap__switch small {
+    font-size: 0.57rem;
+    line-height: 1.35;
+    color: var(--muted-foreground);
+}
+
+.zmk-editor-hold-tap__switch input {
+    width: 0.85rem;
+    height: 0.85rem;
+    flex: 0 0 auto;
+    accent-color: var(--primary);
+}
+
+.zmk-editor-hold-tap__switch[data-disabled="true"] {
+    opacity: 0.42;
+}
+
+.zmk-editor-hold-tap__export-note {
+    margin: 0.55rem 0 0;
+    border-top: 1px solid color-mix(in srgb, var(--border) 68%, transparent);
+    padding-top: 0.55rem;
+    font-size: 0.62rem;
+    line-height: 1.45;
+    color: color-mix(in srgb, var(--muted-foreground) 88%, transparent);
+}
+
+.zmk-editor-hold-tap__export-note code {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    color: color-mix(in srgb, var(--foreground) 78%, var(--muted-foreground));
+}
+
+@media (max-width: 520px) {
+    .zmk-editor-hold-tap__preset-grid,
+    .zmk-editor-hold-tap__actions,
+    .zmk-editor-hold-tap__timing-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .zmk-editor-hold-tap__managed-head {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .zmk-editor-hold-tap__nested {
+        margin-left: 0.25rem;
+        padding-left: 0.5rem;
+    }
+}

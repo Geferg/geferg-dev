@@ -76,8 +76,8 @@ export default function KeyboardWorkspace({
                     <div className="zmk-editor-keyboard">
                         {layer.keys.map((key, index) => {
                             const position = getKeyPosition(index);
-                            const label = getKeyLabel(key);
-                            const category = getKeyCategory(key);
+                            const label = getKeyLabel(key, state);
+                            const category = getKeyCategory(key, state);
 
                             return (
                                 <button

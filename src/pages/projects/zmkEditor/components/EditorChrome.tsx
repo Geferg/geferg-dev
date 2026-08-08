@@ -450,7 +450,7 @@ export function ExportDialog({
                     <p className="zmk-editor-kicker">EXPORT</p>
                     <h2>Generated ZMK keymap</h2>
                     <span>
-                        {state.modes.length} mode{state.modes.length === 1 ? "" : "s"} · {state.layers.length} layers · {KEY_COUNT} keys · {state.modMorphs.length} mod-morph{state.modMorphs.length === 1 ? "" : "s"} · {state.triLayer
+                        {state.modes.length} mode{state.modes.length === 1 ? "" : "s"} · {state.layers.length} layers · {KEY_COUNT} keys · {state.holdTaps.length} tap-hold{state.holdTaps.length === 1 ? "" : "s"} · {state.modMorphs.length} mod-morph{state.modMorphs.length === 1 ? "" : "s"} · {state.triLayer
                             ? "conditional layer enabled"
                             : "direct layers"}
                     </span>
@@ -478,6 +478,9 @@ export function ExportDialog({
                     <span>✓ Layer constants sanitized</span>
                     {state.modMorphs.length > 0 && (
                         <span>✓ Managed mod-morph definitions emitted</span>
+                    )}
+                    {state.holdTaps.length > 0 && (
+                        <span>✓ Managed tap-hold definitions emitted</span>
                     )}
                     <span>! Review locale-specific keycodes before flashing</span>
                 </div>

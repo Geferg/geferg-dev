@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
     QuickBinding,
     ZmkEditorState,
+    ZmkHoldTap,
     ZmkKey,
     ZmkModMorph,
 } from "./zmkEditor.types";
@@ -12,15 +13,21 @@ import {
     createDefaultBaseLayer,
     createDefaultState,
     createKey,
+    composeBehaviorBinding,
     deriveLabel,
-    findModMorphForBinding,
     getCoverage,
+    getHoldTapAssignment,
+    getHoldTapBinding,
     getKeyCategory,
     getKeyLabel,
     getModeLayerIndices,
     getModeLayers,
     getModMorphBinding,
+    getTapHoldSeed,
     inferCategory,
+    isLeftHalfKeyPosition,
+    LEFT_HALF_KEY_POSITIONS,
+    RIGHT_HALF_KEY_POSITIONS,
     sanitizeBehaviorReference,
     sanitizeConstant,
 } from "./logic/zmkEditor.data";
@@ -34,6 +41,7 @@ import {
 } from "./logic/zmkEditor.storage";
 
 import KeyboardWorkspace from "./components/KeyboardWorkspace";
+import type { HomeRowModifier } from "./components/HoldTapEditor";
 import KeyInspector from "./components/KeyInspector";
 import {
     EditorHeader,
@@ -80,7 +88,7 @@ export default function ZmkEditorPage() {
     const exportText = useMemo(() => generateKeymap(state), [state]);
     const coveredCharacters = useMemo(
         () => getCoverage(state),
-        [state.layers, state.modMorphs],
+        [state.layers, state.modMorphs, state.holdTaps],
     );
 
     useEffect(() => {
@@ -164,18 +172,8 @@ export default function ZmkEditorPage() {
             const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
 
             if (patch.binding !== undefined) {
-                const previousModMorph = findModMorphForBinding(draft, key.binding);
                 key.binding = patch.binding;
-
-                if (
-                    previousModMorph &&
-                    key.binding.trim() !== getModMorphBinding(previousModMorph.reference) &&
-                    !isModMorphReferenced(draft, previousModMorph)
-                ) {
-                    draft.modMorphs = draft.modMorphs.filter(
-                        (item) => item.id !== previousModMorph.id,
-                    );
-                }
+                pruneUnusedManagedBehaviors(draft);
             }
 
             if ("labelOverride" in patch) {
@@ -201,6 +199,7 @@ export default function ZmkEditorPage() {
     function replaceSelectedKey(key: ZmkKey) {
         commit((draft) => {
             draft.layers[draft.currentLayer].keys[draft.selectedKey] = cloneKey(key);
+            pruneUnusedManagedBehaviors(draft);
         });
     }
 
@@ -210,6 +209,220 @@ export default function ZmkEditorPage() {
             binding.label,
             binding.category,
         ));
+    }
+
+    function createHoldTapForSelectedKey() {
+        commit((draft) => {
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const seed = getTapHoldSeed(draft, key.binding);
+            if (!seed) return;
+
+            const tapLabel = deriveLabel(composeBehaviorBinding(
+                seed.tapBehavior,
+                seed.tapParameter,
+            ));
+            const id = uniqueHoldTapId(draft);
+            const reference = uniqueManagedBehaviorReference(
+                draft,
+                `${sanitizeBehaviorReference(tapLabel)}_tap_hold`,
+            );
+
+            draft.holdTaps.push({
+                id,
+                reference,
+                holdBehavior: seed.holdBehavior,
+                tapBehavior: seed.tapBehavior,
+                flavor: key.binding.trim().startsWith("&lt ")
+                    ? "tap-preferred"
+                    : "hold-preferred",
+                tappingTermMs: 200,
+                retroTap: false,
+                holdWhileUndecided: false,
+                holdWhileUndecidedLinger: false,
+                holdTriggerKeyPositions: [],
+                holdTriggerOnRelease: false,
+            });
+
+            key.binding = getHoldTapBinding(
+                reference,
+                seed.holdParameter,
+                seed.tapParameter,
+            );
+        });
+    }
+
+    function applyHomeRowMod(modifier: HomeRowModifier) {
+        commit((draft) => {
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const seed = getTapHoldSeed(draft, key.binding);
+            if (!seed || seed.tapBehavior !== "&kp" || seed.tapParameter === "0") {
+                return;
+            }
+
+            const pair = ensureHomeRowHoldTaps(draft);
+            const leftHand = isLeftHalfKeyPosition(draft.selectedKey);
+            const behavior = leftHand ? pair.left : pair.right;
+            const modifierCode = homeRowModifierKeycode(modifier, leftHand);
+
+            key.binding = getHoldTapBinding(
+                behavior.reference,
+                modifierCode,
+                seed.tapParameter,
+            );
+            delete key.categoryOverride;
+        });
+    }
+
+    function assignHoldTapToSelectedKey(id: string) {
+        commit((draft) => {
+            const behavior = draft.holdTaps.find((item) => item.id === id);
+            if (!behavior) return;
+
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const seed = getTapHoldSeed(draft, key.binding);
+            const tapParameter = seed?.tapBehavior === behavior.tapBehavior
+                ? seed.tapParameter
+                : behavior.tapBehavior === "&kp" && seed?.tapBehavior === "&kp"
+                    ? seed.tapParameter
+                    : "0";
+            const holdParameter = defaultHoldTapParameter(draft, behavior);
+
+            key.binding = getHoldTapBinding(
+                behavior.reference,
+                holdParameter,
+                tapParameter,
+            );
+            delete key.categoryOverride;
+        });
+    }
+
+    function updateHoldTap(
+        id: string,
+        patch: Partial<ZmkHoldTap>,
+        record = false,
+    ) {
+        const apply = (draft: ZmkEditorState) => {
+            const behavior = draft.holdTaps.find((item) => item.id === id);
+            if (!behavior) return;
+
+            if (patch.reference !== undefined) {
+                const oldReference = `&${sanitizeBehaviorReference(behavior.reference)}`;
+                const nextReference = uniqueManagedBehaviorReference(
+                    draft,
+                    patch.reference,
+                    id,
+                );
+                const nextBindingReference = `&${nextReference}`;
+
+                if (oldReference !== nextBindingReference) {
+                    replaceBehaviorReference(
+                        draft,
+                        oldReference,
+                        nextBindingReference,
+                        id,
+                    );
+                }
+
+                behavior.reference = nextReference;
+            }
+
+            if (patch.holdBehavior !== undefined) {
+                behavior.holdBehavior = patch.holdBehavior;
+            }
+            if (patch.tapBehavior !== undefined) {
+                behavior.tapBehavior = patch.tapBehavior;
+            }
+            if (patch.flavor !== undefined) behavior.flavor = patch.flavor;
+            if (patch.tappingTermMs !== undefined) {
+                behavior.tappingTermMs = patch.tappingTermMs;
+            }
+            if ("quickTapMs" in patch) {
+                if (patch.quickTapMs === undefined) delete behavior.quickTapMs;
+                else behavior.quickTapMs = patch.quickTapMs;
+            }
+            if ("requirePriorIdleMs" in patch) {
+                if (patch.requirePriorIdleMs === undefined) {
+                    delete behavior.requirePriorIdleMs;
+                } else {
+                    behavior.requirePriorIdleMs = patch.requirePriorIdleMs;
+                }
+            }
+            if (patch.retroTap !== undefined) behavior.retroTap = patch.retroTap;
+            if (patch.holdWhileUndecided !== undefined) {
+                behavior.holdWhileUndecided = patch.holdWhileUndecided;
+            }
+            if (patch.holdWhileUndecidedLinger !== undefined) {
+                behavior.holdWhileUndecidedLinger = patch.holdWhileUndecidedLinger;
+            }
+            if (patch.holdTriggerKeyPositions !== undefined) {
+                behavior.holdTriggerKeyPositions = [...patch.holdTriggerKeyPositions];
+            }
+            if (patch.holdTriggerOnRelease !== undefined) {
+                behavior.holdTriggerOnRelease = patch.holdTriggerOnRelease;
+            }
+            if ("preset" in patch) {
+                if (patch.preset === undefined) delete behavior.preset;
+                else behavior.preset = patch.preset;
+            }
+        };
+
+        record ? commit(apply) : updateLive(apply);
+    }
+
+    function updateSelectedHoldTapAction(
+        id: string,
+        action: "tap" | "hold",
+        binding: string,
+    ) {
+        const parsed = parseHoldTapAction(binding);
+        if (!parsed) return;
+
+        commit((draft) => {
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const assignment = getHoldTapAssignment(draft, key.binding);
+            if (!assignment || assignment.behavior.id !== id) return;
+
+            const behavior = assignment.behavior;
+            let holdParameter = assignment.holdParameter;
+            let tapParameter = assignment.tapParameter;
+
+            if (action === "tap") {
+                behavior.tapBehavior = parsed.behavior;
+                tapParameter = parsed.parameter;
+            } else {
+                behavior.holdBehavior = parsed.behavior;
+                holdParameter = parsed.parameter;
+            }
+
+            if (behavior.preset && (
+                behavior.holdBehavior !== "&kp" ||
+                behavior.tapBehavior !== "&kp"
+            )) {
+                delete behavior.preset;
+            }
+
+            key.binding = getHoldTapBinding(
+                behavior.reference,
+                holdParameter,
+                tapParameter,
+            );
+            delete key.categoryOverride;
+        });
+    }
+
+    function detachSelectedHoldTap(id: string) {
+        commit((draft) => {
+            const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
+            const assignment = getHoldTapAssignment(draft, key.binding);
+            if (!assignment || assignment.behavior.id !== id) return;
+
+            key.binding = composeBehaviorBinding(
+                assignment.behavior.tapBehavior,
+                assignment.tapParameter,
+            );
+            delete key.categoryOverride;
+            pruneUnusedManagedBehaviors(draft);
+        });
     }
 
     function createModMorphForSelectedKey() {
@@ -223,8 +436,8 @@ export default function ZmkEditorPage() {
                 : `${sanitizeBehaviorReference(deriveLabel(normalBinding))}_morph`;
             const reference = uniqueModMorphReference(draft, referenceBase);
             const id = uniqueModMorphId(draft);
-            const displayedLabel = getKeyLabel(key);
-            const category = getKeyCategory(key);
+            const displayedLabel = getKeyLabel(key, draft);
+            const category = getKeyCategory(key, draft);
 
             draft.modMorphs.push({
                 id,
@@ -315,8 +528,8 @@ export default function ZmkEditorPage() {
             const key = draft.layers[draft.currentLayer].keys[draft.selectedKey];
             if (key.binding.trim() !== getModMorphBinding(behavior.reference)) return;
 
-            const displayedLabel = getKeyLabel(key);
-            const category = getKeyCategory(key);
+            const displayedLabel = getKeyLabel(key, draft);
+            const category = getKeyCategory(key, draft);
             draft.layers[draft.currentLayer].keys[draft.selectedKey] = createKey(
                 behavior.normalBinding.trim() || "&none",
                 displayedLabel,
@@ -401,7 +614,7 @@ export default function ZmkEditorPage() {
 
                 layer.keys = layer.keys.map((key, keyIndex) => {
                     const sourceKey = sourceLayer.keys[keyIndex];
-                    const displayedLabel = getKeyLabel(sourceKey);
+                    const displayedLabel = getKeyLabel(sourceKey, draft);
                     const remappedBinding = remapLayerConstants(
                         key.binding,
                         constantMap,
@@ -476,7 +689,7 @@ export default function ZmkEditorPage() {
             }
 
             draft.selectedKey = Math.min(draft.selectedKey, 41);
-            pruneUnusedModMorphs(draft);
+            pruneUnusedManagedBehaviors(draft);
         });
     }
 
@@ -557,7 +770,7 @@ export default function ZmkEditorPage() {
                 draft.currentMode = layer.modeId;
                 draft.currentLayer = layerIndex;
                 draft.selectedKey = 0;
-                pruneUnusedModMorphs(draft);
+                pruneUnusedManagedBehaviors(draft);
             });
             return;
         }
@@ -583,7 +796,7 @@ export default function ZmkEditorPage() {
             }
 
             draft.currentMode = draft.layers[draft.currentLayer].modeId;
-            pruneUnusedModMorphs(draft);
+            pruneUnusedManagedBehaviors(draft);
         });
     }
 
@@ -633,7 +846,7 @@ export default function ZmkEditorPage() {
             return;
         }
 
-        showCommandStatus(`Yanked ${getKeyLabel(result.value.key)}`);
+        showCommandStatus(`Yanked ${getKeyLabel(result.value.key, state)}`);
     }
 
     function deleteSelectedKey() {
@@ -644,7 +857,7 @@ export default function ZmkEditorPage() {
             return;
         }
 
-        const deletedLabel = getKeyLabel(result.value.key);
+        const deletedLabel = getKeyLabel(result.value.key, state);
         replaceSelectedKey(createKey("&trans"));
         showCommandStatus(`Deleted ${deletedLabel} · register updated`);
     }
@@ -664,7 +877,7 @@ export default function ZmkEditorPage() {
 
         replaceSelectedKey(result.value.key);
         showCommandStatus(
-            `Pasted ${getKeyLabel(result.value.key)} from ${result.value.source.layerName}`,
+            `Pasted ${getKeyLabel(result.value.key, state)} from ${result.value.source.layerName}`,
         );
     }
 
@@ -742,6 +955,12 @@ export default function ZmkEditorPage() {
                         onCommitKey={(patch) => updateSelectedKey(patch, true)}
                         onReplaceKey={replaceSelectedKey}
                         onApplyQuickBinding={applyQuickBinding}
+                        onCreateHoldTap={createHoldTapForSelectedKey}
+                        onApplyHomeRowMod={applyHomeRowMod}
+                        onAssignHoldTap={assignHoldTapToSelectedKey}
+                        onUpdateHoldTap={updateHoldTap}
+                        onUpdateHoldTapAction={updateSelectedHoldTapAction}
+                        onDetachHoldTap={detachSelectedHoldTap}
                         onCreateModMorph={createModMorphForSelectedKey}
                         onAssignModMorph={assignModMorphToSelectedKey}
                         onUpdateModMorph={updateModMorph}
@@ -783,12 +1002,31 @@ function uniqueModMorphReference(
     desired: string,
     excludeId?: string,
 ): string {
+    return uniqueManagedBehaviorReference(state, desired, excludeId);
+}
+
+function uniqueHoldTapId(state: ZmkEditorState): string {
+    const used = new Set(state.holdTaps.map((behavior) => behavior.id));
+    let index = 1;
+
+    while (used.has(`hold-tap-${index}`)) index += 1;
+    return `hold-tap-${index}`;
+}
+
+function uniqueManagedBehaviorReference(
+    state: ZmkEditorState,
+    desired: string,
+    excludeId?: string,
+): string {
     const base = sanitizeBehaviorReference(desired);
-    const used = new Set(
-        state.modMorphs
+    const used = new Set([
+        ...state.modMorphs
             .filter((behavior) => behavior.id !== excludeId)
             .map((behavior) => behavior.reference),
-    );
+        ...state.holdTaps
+            .filter((behavior) => behavior.id !== excludeId)
+            .map((behavior) => behavior.reference),
+    ]);
 
     if (!used.has(base)) return base;
 
@@ -805,22 +1043,52 @@ function replaceBehaviorReference(
 ): void {
     for (const layer of state.layers) {
         for (const key of layer.keys) {
-            if (key.binding.trim() === oldBinding) {
-                key.binding = newBinding;
-            }
+            key.binding = replaceLeadingBehaviorReference(
+                key.binding,
+                oldBinding,
+                newBinding,
+            );
         }
     }
 
     for (const behavior of state.modMorphs) {
         if (behavior.id === renamedBehaviorId) continue;
 
-        if (behavior.normalBinding.trim() === oldBinding) {
-            behavior.normalBinding = newBinding;
+        behavior.normalBinding = replaceLeadingBehaviorReference(
+            behavior.normalBinding,
+            oldBinding,
+            newBinding,
+        );
+        behavior.morphedBinding = replaceLeadingBehaviorReference(
+            behavior.morphedBinding,
+            oldBinding,
+            newBinding,
+        );
+    }
+
+    for (const behavior of state.holdTaps) {
+        if (behavior.id === renamedBehaviorId) continue;
+
+        if (behavior.holdBehavior === oldBinding) {
+            behavior.holdBehavior = newBinding;
         }
-        if (behavior.morphedBinding.trim() === oldBinding) {
-            behavior.morphedBinding = newBinding;
+        if (behavior.tapBehavior === oldBinding) {
+            behavior.tapBehavior = newBinding;
         }
     }
+}
+
+function replaceLeadingBehaviorReference(
+    binding: string,
+    oldReference: string,
+    newReference: string,
+): string {
+    const trimmed = binding.trim();
+    if (trimmed === oldReference) return newReference;
+    if (trimmed.startsWith(`${oldReference} `)) {
+        return `${newReference}${trimmed.slice(oldReference.length)}`;
+    }
+    return binding;
 }
 
 function isModMorphReferenced(
@@ -837,12 +1105,13 @@ function isModMorphReferenced(
 
     return state.modMorphs.some((behavior) =>
         behavior.id !== target.id && (
-            behavior.normalBinding.trim() === binding ||
-            behavior.morphedBinding.trim() === binding
+            firstBehaviorReference(behavior.normalBinding) === binding ||
+            firstBehaviorReference(behavior.morphedBinding) === binding
         ),
+    ) || state.holdTaps.some((behavior) =>
+        behavior.holdBehavior === binding || behavior.tapBehavior === binding,
     );
 }
-
 
 function nextModeNumber(state: ZmkEditorState): number {
     const usedNames = new Set(state.modes.map((mode) => mode.name.toLowerCase()));
@@ -924,31 +1193,147 @@ function nextLayerColor(state: ZmkEditorState, modeId: string): string {
     return palette[count % palette.length];
 }
 
-function pruneUnusedModMorphs(state: ZmkEditorState): void {
-    const byBinding = new Map(
+function ensureHomeRowHoldTaps(state: ZmkEditorState): {
+    left: ZmkHoldTap;
+    right: ZmkHoldTap;
+} {
+    let left = state.holdTaps.find((behavior) => behavior.preset === "home-row-left");
+    let right = state.holdTaps.find((behavior) => behavior.preset === "home-row-right");
+
+    if (!left) {
+        left = createHomeRowHoldTap(
+            state,
+            "home-row-left",
+            "hml",
+            [...RIGHT_HALF_KEY_POSITIONS],
+        );
+        state.holdTaps.push(left);
+    }
+    if (!right) {
+        right = createHomeRowHoldTap(
+            state,
+            "home-row-right",
+            "hmr",
+            [...LEFT_HALF_KEY_POSITIONS],
+        );
+        state.holdTaps.push(right);
+    }
+
+    return { left, right };
+}
+
+function createHomeRowHoldTap(
+    state: ZmkEditorState,
+    preset: "home-row-left" | "home-row-right",
+    desiredReference: string,
+    holdTriggerKeyPositions: number[],
+): ZmkHoldTap {
+    return {
+        id: uniqueHoldTapId(state),
+        reference: uniqueManagedBehaviorReference(state, desiredReference),
+        holdBehavior: "&kp",
+        tapBehavior: "&kp",
+        flavor: "balanced",
+        tappingTermMs: 280,
+        quickTapMs: 175,
+        requirePriorIdleMs: 150,
+        retroTap: false,
+        holdWhileUndecided: false,
+        holdWhileUndecidedLinger: false,
+        holdTriggerKeyPositions,
+        holdTriggerOnRelease: true,
+        preset,
+    };
+}
+
+function homeRowModifierKeycode(
+    modifier: HomeRowModifier,
+    leftHand: boolean,
+): string {
+    const side = leftHand ? "L" : "R";
+    const names: Record<HomeRowModifier, string> = {
+        ctrl: "CTRL",
+        alt: "ALT",
+        gui: "GUI",
+        shift: "SHFT",
+    };
+    return `${side}${names[modifier]}`;
+}
+
+function parseHoldTapAction(binding: string): {
+    behavior: string;
+    parameter: string;
+} | undefined {
+    const match = binding.trim().match(/^(&[A-Za-z0-9_]+)(?:\s+(.+))?$/);
+    if (!match) return undefined;
+
+    return {
+        behavior: match[1],
+        parameter: match[2]?.trim() || "0",
+    };
+}
+
+function defaultHoldTapParameter(
+    state: ZmkEditorState,
+    behavior: ZmkHoldTap,
+): string {
+    if (behavior.holdBehavior === "&kp") {
+        if (behavior.preset === "home-row-right") return "RSHFT";
+        return "LSHFT";
+    }
+    if (behavior.holdBehavior === "&mo") {
+        return getModeLayers(state, state.currentMode)[1]?.constant ?? "0";
+    }
+    return "0";
+}
+
+function firstBehaviorReference(binding: string): string {
+    return binding.trim().split(/\s+/)[0] ?? "";
+}
+
+function pruneUnusedManagedBehaviors(state: ZmkEditorState): void {
+    const modMorphByBinding = new Map(
         state.modMorphs.map((behavior) => [
             getModMorphBinding(behavior.reference),
             behavior,
         ]),
     );
-    const reachable = new Set<string>();
+    const holdTapByBinding = new Map(
+        state.holdTaps.map((behavior) => [
+            `&${sanitizeBehaviorReference(behavior.reference)}`,
+            behavior,
+        ]),
+    );
+    const reachableModMorphs = new Set<string>();
+    const reachableHoldTaps = new Set<string>();
     const queue = state.layers.flatMap((layer) =>
         layer.keys.map((key) => key.binding.trim()),
     );
 
     while (queue.length > 0) {
         const binding = queue.pop()!;
-        const behavior = byBinding.get(binding);
-        if (!behavior || reachable.has(behavior.id)) continue;
+        const reference = firstBehaviorReference(binding);
 
-        reachable.add(behavior.id);
-        queue.push(
-            behavior.normalBinding.trim(),
-            behavior.morphedBinding.trim(),
-        );
+        const modMorph = modMorphByBinding.get(reference);
+        if (modMorph && !reachableModMorphs.has(modMorph.id)) {
+            reachableModMorphs.add(modMorph.id);
+            queue.push(
+                modMorph.normalBinding.trim(),
+                modMorph.morphedBinding.trim(),
+            );
+        }
+
+        const holdTap = holdTapByBinding.get(reference);
+        if (holdTap && !reachableHoldTaps.has(holdTap.id)) {
+            reachableHoldTaps.add(holdTap.id);
+            queue.push(holdTap.holdBehavior, holdTap.tapBehavior);
+        }
     }
 
     state.modMorphs = state.modMorphs.filter((behavior) =>
-        reachable.has(behavior.id),
+        reachableModMorphs.has(behavior.id),
+    );
+    state.holdTaps = state.holdTaps.filter((behavior) =>
+        reachableHoldTaps.has(behavior.id),
     );
 }

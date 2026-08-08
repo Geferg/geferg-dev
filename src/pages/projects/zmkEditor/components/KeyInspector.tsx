@@ -4,6 +4,7 @@ import type {
     KeyCategory,
     QuickBinding,
     ZmkEditorState,
+    ZmkHoldTap,
     ZmkKey,
     ZmkModMorph,
 } from "../zmkEditor.types";
@@ -12,12 +13,12 @@ import {
     CATEGORY_LABELS,
     QUICK_BINDING_GROUPS,
     createKey,
-    deriveLabel,
     findModMorphForBinding,
     getKeyCategory,
     getKeyLabel,
     sanitizeConstant,
 } from "../logic/zmkEditor.data";
+import HoldTapEditor, { type HomeRowModifier } from "./HoldTapEditor";
 import ModMorphEditor from "./ModMorphEditor";
 
 export default function KeyInspector({
@@ -31,6 +32,12 @@ export default function KeyInspector({
     onCommitKey,
     onReplaceKey,
     onApplyQuickBinding,
+    onCreateHoldTap,
+    onApplyHomeRowMod,
+    onAssignHoldTap,
+    onUpdateHoldTap,
+    onUpdateHoldTapAction,
+    onDetachHoldTap,
     onCreateModMorph,
     onAssignModMorph,
     onUpdateModMorph,
@@ -47,6 +54,20 @@ export default function KeyInspector({
     onCommitKey: (patch: Partial<ZmkKey>) => void;
     onReplaceKey: (key: ZmkKey) => void;
     onApplyQuickBinding: (binding: QuickBinding) => void;
+    onCreateHoldTap: () => void;
+    onApplyHomeRowMod: (modifier: HomeRowModifier) => void;
+    onAssignHoldTap: (id: string) => void;
+    onUpdateHoldTap: (
+        id: string,
+        patch: Partial<ZmkHoldTap>,
+        record?: boolean,
+    ) => void;
+    onUpdateHoldTapAction: (
+        id: string,
+        action: "tap" | "hold",
+        binding: string,
+    ) => void;
+    onDetachHoldTap: (id: string) => void;
     onCreateModMorph: () => void;
     onAssignModMorph: (id: string) => void;
     onUpdateModMorph: (
@@ -64,13 +85,16 @@ export default function KeyInspector({
         ? (state.selectedKey % 12) + 1
         : state.selectedKey - 35;
 
-    const derivedLabel = deriveLabel(selectedKey.binding);
-    const displayedLabel = getKeyLabel(selectedKey);
-    const effectiveCategory = getKeyCategory(selectedKey);
+    const derivedLabel = getKeyLabel({
+        ...selectedKey,
+        labelOverride: undefined,
+    }, state);
+    const displayedLabel = getKeyLabel(selectedKey, state);
+    const effectiveCategory = getKeyCategory(selectedKey, state);
     const automaticCategory = getKeyCategory({
         ...selectedKey,
         categoryOverride: undefined,
-    });
+    }, state);
     const hasLabelOverride = selectedKey.labelOverride !== undefined;
     const hasCategoryOverride = selectedKey.categoryOverride !== undefined;
     const managedModMorph = findModMorphForBinding(state, selectedKey.binding);
@@ -157,6 +181,19 @@ export default function KeyInspector({
                     override is set below.
                 </p>
             </div>
+
+            <HoldTapEditor
+                state={state}
+                selectedKey={selectedKey}
+                onBeginEdit={onBeginEdit}
+                onEndEdit={onEndEdit}
+                onCreate={onCreateHoldTap}
+                onApplyHomeRowMod={onApplyHomeRowMod}
+                onAssign={onAssignHoldTap}
+                onUpdate={onUpdateHoldTap}
+                onUpdateAction={onUpdateHoldTapAction}
+                onDetach={onDetachHoldTap}
+            />
 
             <ModMorphEditor
                 state={state}

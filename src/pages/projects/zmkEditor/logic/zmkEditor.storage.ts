@@ -45,10 +45,13 @@ export type ZmkKeyRegisterEntry = {
 
 export const zmkEditorStateStore = siteStorage.createStore<ZmkEditorState>({
     key: "zmk-editor:state",
-    version: 2,
+    version: 3,
     codec: {
         decode(value, storedVersion) {
-            if ((storedVersion !== 1 && storedVersion !== 2) || !isEditorStateCandidate(value)) {
+            if (
+                (storedVersion !== 1 && storedVersion !== 2 && storedVersion !== 3) ||
+                !isEditorStateCandidate(value)
+            ) {
                 return null;
             }
 

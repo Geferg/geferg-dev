@@ -58,6 +58,34 @@ export type ZmkModMorph = {
     keepMods: ZmkModifier[];
 };
 
+export type ZmkHoldTapFlavor =
+    | "hold-preferred"
+    | "balanced"
+    | "tap-preferred"
+    | "tap-unless-interrupted";
+
+/**
+ * A managed two-parameter ZMK hold-tap behavior. The behavior references are
+ * stored without key-specific parameters; those remain in each key binding,
+ * e.g. `&hml LCTRL A`.
+ */
+export type ZmkHoldTap = {
+    id: string;
+    reference: string;
+    holdBehavior: string;
+    tapBehavior: string;
+    flavor: ZmkHoldTapFlavor;
+    tappingTermMs: number;
+    quickTapMs?: number;
+    requirePriorIdleMs?: number;
+    retroTap: boolean;
+    holdWhileUndecided: boolean;
+    holdWhileUndecidedLinger: boolean;
+    holdTriggerKeyPositions: number[];
+    holdTriggerOnRelease: boolean;
+    preset?: "home-row-left" | "home-row-right";
+};
+
 export type ZmkEditorState = {
     currentMode: string;
     currentLayer: number;
@@ -66,6 +94,7 @@ export type ZmkEditorState = {
     triLayer: boolean;
     ledCount: number;
     modMorphs: ZmkModMorph[];
+    holdTaps: ZmkHoldTap[];
     modes: ZmkMode[];
     layers: ZmkLayer[];
 };

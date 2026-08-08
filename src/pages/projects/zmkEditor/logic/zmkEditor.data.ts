@@ -3,6 +3,8 @@ import type {
     KeyPosition,
     QuickBindingGroup,
     ZmkEditorState,
+    ZmkHoldTap,
+    ZmkHoldTapFlavor,
     ZmkKey,
     ZmkLayer,
     ZmkMode,
@@ -11,6 +13,34 @@ import type {
 } from "../zmkEditor.types";
 
 export const KEY_COUNT = 42;
+
+export const LEFT_HALF_KEY_POSITIONS = [
+    0, 1, 2, 3, 4, 5,
+    12, 13, 14, 15, 16, 17,
+    24, 25, 26, 27, 28, 29,
+    36, 37, 38,
+] as const;
+
+export const RIGHT_HALF_KEY_POSITIONS = [
+    6, 7, 8, 9, 10, 11,
+    18, 19, 20, 21, 22, 23,
+    30, 31, 32, 33, 34, 35,
+    39, 40, 41,
+] as const;
+
+export const HOLD_TAP_FLAVORS: ReadonlyArray<{
+    value: ZmkHoldTapFlavor;
+    label: string;
+}> = [
+    { value: "hold-preferred", label: "Hold preferred" },
+    { value: "balanced", label: "Balanced" },
+    { value: "tap-preferred", label: "Tap preferred" },
+    { value: "tap-unless-interrupted", label: "Tap unless interrupted" },
+];
+
+const VALID_HOLD_TAP_FLAVORS = new Set<ZmkHoldTapFlavor>(
+    HOLD_TAP_FLAVORS.map((option) => option.value),
+);
 
 export const ZMK_MODIFIER_OPTIONS: ReadonlyArray<{
     value: ZmkModifier;
@@ -145,12 +175,58 @@ export function createKey(
     };
 }
 
-export function getKeyLabel(key: ZmkKey): string {
-    return key.labelOverride ?? deriveLabel(key.binding);
+export function getKeyLabel(
+    key: ZmkKey,
+    state?: Pick<ZmkEditorState, "holdTaps">,
+): string {
+    if (key.labelOverride !== undefined) return key.labelOverride;
+
+    const assignment = state
+        ? getHoldTapAssignment(state, key.binding)
+        : undefined;
+    if (assignment) {
+        return deriveLabel(composeBehaviorBinding(
+            assignment.behavior.tapBehavior,
+            assignment.tapParameter,
+        ));
+    }
+
+    if (/^&(mt|lt)\s+\S+\s+\S+$/.test(key.binding.trim())) {
+        const seed = getTapHoldSeed(state ?? { holdTaps: [] }, key.binding);
+        if (seed) {
+            return deriveLabel(composeBehaviorBinding(
+                seed.tapBehavior,
+                seed.tapParameter,
+            ));
+        }
+    }
+
+    return deriveLabel(key.binding);
 }
 
-export function getKeyCategory(key: ZmkKey): KeyCategory {
-    return key.categoryOverride ?? inferCategory(key.binding, getKeyLabel(key));
+export function getKeyCategory(
+    key: ZmkKey,
+    state?: Pick<ZmkEditorState, "holdTaps">,
+): KeyCategory {
+    if (key.categoryOverride !== undefined) return key.categoryOverride;
+
+    const assignment = state
+        ? getHoldTapAssignment(state, key.binding)
+        : undefined;
+    if (assignment) {
+        const holdBinding = composeBehaviorBinding(
+            assignment.behavior.holdBehavior,
+            assignment.holdParameter,
+        );
+        const tapBinding = composeBehaviorBinding(
+            assignment.behavior.tapBehavior,
+            assignment.tapParameter,
+        );
+        const label = getKeyLabel(key, state);
+        return inferCategory(`${holdBinding} ${tapBinding}`, label);
+    }
+
+    return inferCategory(key.binding, getKeyLabel(key, state));
 }
 
 /**
@@ -161,7 +237,7 @@ export function getCoverage(state: ZmkEditorState): Set<string> {
     const labels = state.layers.flatMap((layer) =>
         layer.keys.flatMap((key) => [
             // Preserve explicit presentation overrides as coverage hints.
-            getKeyLabel(key),
+            getKeyLabel(key, state),
             ...resolveCoverageLabels(state, key.binding),
         ]),
     );
@@ -181,6 +257,51 @@ function resolveCoverageLabels(
     binding: string,
     visited = new Set<string>(),
 ): string[] {
+    const holdTap = getHoldTapAssignment(state, binding);
+    if (holdTap) {
+        if (visited.has(holdTap.behavior.id)) return [];
+
+        const nextVisited = new Set(visited);
+        nextVisited.add(holdTap.behavior.id);
+        return [
+            ...resolveCoverageLabels(
+                state,
+                composeBehaviorBinding(
+                    holdTap.behavior.holdBehavior,
+                    holdTap.holdParameter,
+                ),
+                nextVisited,
+            ),
+            ...resolveCoverageLabels(
+                state,
+                composeBehaviorBinding(
+                    holdTap.behavior.tapBehavior,
+                    holdTap.tapParameter,
+                ),
+                nextVisited,
+            ),
+        ];
+    }
+
+
+    if (/^&(mt|lt)\s+\S+\s+\S+$/.test(binding.trim())) {
+        const seed = getTapHoldSeed(state, binding);
+        if (seed) {
+            return [
+                ...resolveCoverageLabels(
+                    state,
+                    composeBehaviorBinding(seed.holdBehavior, seed.holdParameter),
+                    visited,
+                ),
+                ...resolveCoverageLabels(
+                    state,
+                    composeBehaviorBinding(seed.tapBehavior, seed.tapParameter),
+                    visited,
+                ),
+            ];
+        }
+    }
+
     const behavior = findModMorphForBinding(state, binding);
 
     if (!behavior) {
@@ -326,6 +447,7 @@ export function createDefaultState(): ZmkEditorState {
         triLayer: true,
         ledCount: 27,
         modMorphs: [],
+        holdTaps: [],
         modes: [
             { id: DEFAULT_MODE_ID, name: "Default" },
         ],
@@ -454,6 +576,10 @@ export function normalizeState(raw: unknown): ZmkEditorState {
         : modeLayerIndices[0] ?? 0;
 
     const modMorphs = normalizeModMorphs(raw.modMorphs);
+    const holdTaps = normalizeHoldTaps(
+        raw.holdTaps,
+        new Set(modMorphs.map((behavior) => behavior.reference)),
+    );
 
     return {
         currentMode,
@@ -463,6 +589,7 @@ export function normalizeState(raw: unknown): ZmkEditorState {
         triLayer: raw.triLayer !== false,
         ledCount: clampInteger(raw.ledCount, 0, 128),
         modMorphs,
+        holdTaps,
         modes,
         layers,
     };
@@ -544,6 +671,118 @@ export function sanitizeBehaviorReference(value: string): string {
 
 export function getModMorphBinding(reference: string): string {
     return `&${sanitizeBehaviorReference(reference)}`;
+}
+
+export function getHoldTapBinding(
+    reference: string,
+    holdParameter = "0",
+    tapParameter = "0",
+): string {
+    return `&${sanitizeBehaviorReference(reference)} ${holdParameter.trim() || "0"} ${tapParameter.trim() || "0"}`;
+}
+
+export function findHoldTapForBinding(
+    state: Pick<ZmkEditorState, "holdTaps">,
+    binding: string,
+): ZmkHoldTap | undefined {
+    const reference = binding.trim().split(/\s+/)[0];
+    if (!reference?.startsWith("&")) return undefined;
+
+    return state.holdTaps.find(
+        (behavior) => `&${sanitizeBehaviorReference(behavior.reference)}` === reference,
+    );
+}
+
+export function getHoldTapAssignment(
+    state: Pick<ZmkEditorState, "holdTaps">,
+    binding: string,
+): {
+    behavior: ZmkHoldTap;
+    holdParameter: string;
+    tapParameter: string;
+} | undefined {
+    const behavior = findHoldTapForBinding(state, binding);
+    if (!behavior) return undefined;
+
+    const [, holdParameter = "0", tapParameter = "0"] = binding
+        .trim()
+        .split(/\s+/);
+
+    return { behavior, holdParameter, tapParameter };
+}
+
+export function parseSingleParameterBinding(binding: string): {
+    behavior: string;
+    parameter: string;
+} | undefined {
+    const parts = binding.trim().split(/\s+/).filter(Boolean);
+    if (parts.length < 1 || parts.length > 2 || !parts[0].startsWith("&")) {
+        return undefined;
+    }
+
+    return {
+        behavior: parts[0],
+        parameter: parts[1] ?? "0",
+    };
+}
+
+export function composeBehaviorBinding(behavior: string, parameter: string): string {
+    const normalizedBehavior = behavior.trim() || "&none";
+    const normalizedParameter = parameter.trim() || "0";
+    return normalizedParameter === "0"
+        ? normalizedBehavior
+        : `${normalizedBehavior} ${normalizedParameter}`;
+}
+
+export function getTapHoldSeed(
+    state: Pick<ZmkEditorState, "holdTaps">,
+    binding: string,
+): {
+    holdBehavior: string;
+    holdParameter: string;
+    tapBehavior: string;
+    tapParameter: string;
+} | undefined {
+    const assignment = getHoldTapAssignment(state, binding);
+    if (assignment) {
+        return {
+            holdBehavior: assignment.behavior.holdBehavior,
+            holdParameter: assignment.holdParameter,
+            tapBehavior: assignment.behavior.tapBehavior,
+            tapParameter: assignment.tapParameter,
+        };
+    }
+
+    const parts = binding.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 3 && parts[0] === "&mt") {
+        return {
+            holdBehavior: "&kp",
+            holdParameter: parts[1],
+            tapBehavior: "&kp",
+            tapParameter: parts[2],
+        };
+    }
+    if (parts.length === 3 && parts[0] === "&lt") {
+        return {
+            holdBehavior: "&mo",
+            holdParameter: parts[1],
+            tapBehavior: "&kp",
+            tapParameter: parts[2],
+        };
+    }
+
+    const tap = parseSingleParameterBinding(binding);
+    if (!tap) return undefined;
+    return {
+        holdBehavior: "&kp",
+        holdParameter: "LSHFT",
+        tapBehavior: tap.behavior,
+        tapParameter: tap.parameter,
+    };
+}
+
+export function isLeftHalfKeyPosition(index: number): boolean {
+    return LEFT_HALF_KEY_POSITIONS.includes(index as typeof LEFT_HALF_KEY_POSITIONS[number]);
 }
 
 export function findModMorphForBinding(
@@ -712,6 +951,90 @@ function normalizeModMorphs(candidate: unknown): ZmkModMorph[] {
     }
 
     return result;
+}
+
+function normalizeHoldTaps(
+    candidate: unknown,
+    reservedReferences: Set<string>,
+): ZmkHoldTap[] {
+    if (!Array.isArray(candidate)) return [];
+
+    const usedIds = new Set<string>();
+    const usedReferences = new Set(reservedReferences);
+    const result: ZmkHoldTap[] = [];
+
+    for (const [index, rawBehavior] of candidate.slice(0, 64).entries()) {
+        if (!isRecord(rawBehavior)) continue;
+
+        let id = typeof rawBehavior.id === "string" && rawBehavior.id.trim()
+            ? rawBehavior.id.trim()
+            : `hold-tap-${index + 1}`;
+        while (usedIds.has(id)) id = `${id}-${index + 1}`;
+
+        const reference = sanitizeBehaviorReference(
+            typeof rawBehavior.reference === "string"
+                ? rawBehavior.reference
+                : `hold_tap_${index + 1}`,
+        );
+        if (usedReferences.has(reference)) continue;
+
+        const flavor = isHoldTapFlavor(rawBehavior.flavor)
+            ? rawBehavior.flavor
+            : "balanced";
+        const holdTriggerKeyPositions = Array.isArray(rawBehavior.holdTriggerKeyPositions)
+            ? [...new Set(rawBehavior.holdTriggerKeyPositions
+                .map((value) => Number(value))
+                .filter((value) => Number.isInteger(value) && value >= 0 && value < KEY_COUNT))]
+            : [];
+        const preset = rawBehavior.preset === "home-row-left" || rawBehavior.preset === "home-row-right"
+            ? rawBehavior.preset
+            : undefined;
+
+        result.push({
+            id,
+            reference,
+            holdBehavior: normalizeBehaviorNodeReference(rawBehavior.holdBehavior, "&kp"),
+            tapBehavior: normalizeBehaviorNodeReference(rawBehavior.tapBehavior, "&kp"),
+            flavor,
+            tappingTermMs: rawBehavior.tappingTermMs === undefined
+                ? 200
+                : clampInteger(rawBehavior.tappingTermMs, 1, 5000),
+            ...(rawBehavior.quickTapMs === undefined
+                ? {}
+                : { quickTapMs: clampInteger(rawBehavior.quickTapMs, 0, 5000) }),
+            ...(rawBehavior.requirePriorIdleMs === undefined
+                ? {}
+                : {
+                    requirePriorIdleMs: clampInteger(
+                        rawBehavior.requirePriorIdleMs,
+                        0,
+                        5000,
+                    ),
+                }),
+            retroTap: rawBehavior.retroTap === true,
+            holdWhileUndecided: rawBehavior.holdWhileUndecided === true,
+            holdWhileUndecidedLinger: rawBehavior.holdWhileUndecidedLinger === true,
+            holdTriggerKeyPositions,
+            holdTriggerOnRelease: rawBehavior.holdTriggerOnRelease === true,
+            ...(preset ? { preset } : {}),
+        });
+
+        usedIds.add(id);
+        usedReferences.add(reference);
+    }
+
+    return result;
+}
+
+function normalizeBehaviorNodeReference(candidate: unknown, fallback: string): string {
+    if (typeof candidate !== "string") return fallback;
+    const trimmed = candidate.trim();
+    if (!/^&[A-Za-z0-9_]+$/.test(trimmed)) return fallback;
+    return trimmed;
+}
+
+function isHoldTapFlavor(value: unknown): value is ZmkHoldTapFlavor {
+    return typeof value === "string" && VALID_HOLD_TAP_FLAVORS.has(value as ZmkHoldTapFlavor);
 }
 
 function normalizeModifiers(candidate: unknown): ZmkModifier[] {
