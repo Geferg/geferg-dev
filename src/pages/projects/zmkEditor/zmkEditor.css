@@ -863,6 +863,12 @@
     padding: 0.1rem 0 0.65rem;
 }
 
+.zmk-editor-mod-morph__content--nested {
+    margin-left: 0.55rem;
+    border-left: 1px solid color-mix(in srgb, var(--border) 76%, transparent);
+    padding-left: 0.65rem;
+}
+
 .zmk-editor-mod-morph__empty {
     display: grid;
     gap: 0.5rem;
@@ -1373,7 +1379,8 @@
         flex-direction: column;
     }
 
-    .zmk-editor-hold-tap__nested {
+    .zmk-editor-hold-tap__nested,
+    .zmk-editor-mod-morph__content--nested {
         margin-left: 0.25rem;
         padding-left: 0.5rem;
     }

@@ -56,7 +56,7 @@ export default function ModMorphEditor({
                 </span>
             </summary>
 
-            <div className="zmk-editor-mod-morph__content">
+            <div className="zmk-editor-mod-morph__content zmk-editor-mod-morph__content--nested">
                 {behavior ? (
                     <ManagedModMorph
                         behavior={behavior}
