@@ -182,8 +182,6 @@ export function ModeRail({
         if (nextName && nextName !== currentName) onRename(modeId, nextName);
     }
 
-    const currentMode = state.modes.find((mode) => mode.id === state.currentMode) ?? state.modes[0];
-
     return (
         <div className="zmk-editor-mode-bar">
             <nav className="zmk-editor-mode-rail" aria-label="Keyboard modes">
@@ -240,17 +238,6 @@ export function ModeRail({
                 >
                     +
                 </button>
-
-                {currentMode && (
-                    <button
-                        type="button"
-                        className="zmk-editor-mode-rename-action"
-                        title="You can also double-click a mode name to rename it"
-                        onClick={() => renameMode(currentMode.id, currentMode.name)}
-                    >
-                        Rename mode
-                    </button>
-                )}
             </nav>
         </div>
     );
