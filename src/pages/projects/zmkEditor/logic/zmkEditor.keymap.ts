@@ -19,6 +19,7 @@ export function generateKeymap(state: ZmkEditorState): string {
         "#include <dt-bindings/zmk/bt.h>",
         "#include <dt-bindings/zmk/outputs.h>",
         "#include <dt-bindings/zmk/rgb.h>",
+        "#include <dt-bindings/zmk/ext_power.h>",
     ];
 
     if (state.modMorphs.length > 0) {
