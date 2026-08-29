@@ -40,7 +40,7 @@ function getDepthStrength(width: number, height: number) {
 }
 
 function getWidthScale(width: number) {
-    return Math.min(1, width / REFERENCE_WIDTH);
+    return width / REFERENCE_WIDTH;
 }
 
 function createStarField(
