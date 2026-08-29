@@ -32,7 +32,7 @@ const PLANET_COLORS = {
     pluto: "#B08A7A",
 };
 const REFERENCE_ASPECT_RATIO = 16 / 9;
-const DEPTH_STRENGTH = 0.75;
+const DEPTH_STRENGTH = 0.4;
 
 function getDepthStrength(width: number, height: number) {
     const aspectRatio = width / height;
