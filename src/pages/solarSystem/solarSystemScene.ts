@@ -30,6 +30,13 @@ const PLANET_COLORS = {
 
     pluto: "#B08A7A",
 };
+const REFERENCE_ASPECT_RATIO = 16 / 9;
+const DEPTH_STRENGTH = 0.75;
+
+function getDepthStrength(width: number, height: number) {
+    const aspectRatio = width / height;
+    return DEPTH_STRENGTH * (aspectRatio / REFERENCE_ASPECT_RATIO);
+}
 
 function getWidthScale(width: number) {
     return Math.min(1, width / REFERENCE_WIDTH);
@@ -451,7 +458,6 @@ export function createSolarSystemScene(app: Application) {
     };
 
     const animate = (ticker: Ticker) => {
-        // The renderer is the source of truth for the drawable viewport.
         if (
             app.screen.width !== screenWidth ||
             app.screen.height !== screenHeight
@@ -470,16 +476,19 @@ export function createSolarSystemScene(app: Application) {
         sun.visualScale = widthScale;
         sun.updateGraphics();
 
-        for (const planet of sunOrbit.planets) {
-            const orbitY =
-                planet.y - sunOrbit.origin.y;
+        const depthStrength = getDepthStrength(
+            screenWidth,
+            screenHeight,
+        );
 
-            const depthScale =
-                1.1 +
-                (orbitY / perspectiveReferenceHeight) * 2;
+        for (const planet of sunOrbit.planets) {
+            const orbitDepth =
+                (planet.y - sunOrbit.origin.y) /
+                REFERENCE_ORBIT_HEIGHT;
 
             planet.visualScale =
-                widthScale * depthScale;
+                widthScale *
+                (1.1 + orbitDepth * depthStrength);
         }
 
         sunOrbit.updatePlanetGraphics();
