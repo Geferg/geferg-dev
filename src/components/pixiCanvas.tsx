@@ -35,9 +35,14 @@ export function PixiCanvas({ createScene }: Props) {
             }
 
             host.appendChild(app.canvas);
-            app.canvas.style.display = "block";
-            app.canvas.style.width = "100%";
-            app.canvas.style.height = "100%";
+
+            Object.assign(app.canvas.style, {
+                display: "block",
+                position: "absolute",
+                inset: "0",
+                width: "100%",
+                height: "100%",
+            });
 
             cleanupScene = createScene(app);
         }
@@ -54,5 +59,10 @@ export function PixiCanvas({ createScene }: Props) {
         };
     }, [createScene]);
 
-    return <div ref={hostRef} className="min-h-0 flex-1 overflow-hidden" />;
+    return (
+        <div
+            ref={hostRef}
+            className="relative min-h-0 min-w-0 flex-1 overflow-hidden"
+        />
+    );
 }
