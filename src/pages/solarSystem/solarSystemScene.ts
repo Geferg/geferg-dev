@@ -12,6 +12,7 @@ import { Planet } from "./classes/Planet";
 
 const REFERENCE_WIDTH = 2560;
 const REFERENCE_ORBIT_HEIGHT = 300;
+const MIN_DEPTH_SCALE = 0.15;
 
 const PLANET_COLORS = {
     sun: "#FFAA33",
@@ -486,9 +487,12 @@ export function createSolarSystemScene(app: Application) {
                 (planet.y - sunOrbit.origin.y) /
                 REFERENCE_ORBIT_HEIGHT;
 
-            planet.visualScale =
-                widthScale *
-                (1.1 + orbitDepth * depthStrength);
+            const depthScale = Math.max(
+                MIN_DEPTH_SCALE,
+                1.1 + orbitDepth * depthStrength,
+            );
+
+            planet.visualScale = widthScale * depthScale;
         }
 
         sunOrbit.updatePlanetGraphics();
